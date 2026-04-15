@@ -4,6 +4,7 @@ import { DataTable } from "@/widgets/data-table/ui/data-table";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { MoreHorizontal, Image as ImageIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,11 +31,13 @@ const mockNotices: Notice[] = [
 ];
 
 export function NoticesPage() {
+  const { t } = useTranslation();
+
   const columns = useMemo<ColumnDef<Notice>[]>(
     () => [
       {
         accessorKey: "title",
-        header: "Title",
+        header: t("notices.table.title"),
         cell: ({ row }) => (
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
@@ -46,27 +49,33 @@ export function NoticesPage() {
       },
       {
         accessorKey: "animalType",
-        header: "Type",
+        header: t("notices.table.type"),
       },
       {
         accessorKey: "status",
-        header: "Status",
+        header: t("notices.table.status"),
         cell: ({ row }) => {
-          const status = row.getValue("status") as string;
+          const status = row.getValue("status") as Notice["status"];
           const variant = 
             status === "Found" ? "default" : 
             status === "Lost" ? "destructive" : "secondary";
-          
-          return <Badge variant={variant}>{status}</Badge>;
+          const label =
+            status === "Found"
+              ? t("common.status.found")
+              : status === "Lost"
+                ? t("common.status.lost")
+                : t("common.status.hidden");
+
+          return <Badge variant={variant}>{label}</Badge>;
         },
       },
       {
         accessorKey: "reporter",
-        header: "Reporter",
+        header: t("notices.table.reporter"),
       },
       {
         accessorKey: "date",
-        header: "Reported Date",
+        header: t("notices.table.reportedDate"),
       },
       {
         id: "actions",
@@ -77,19 +86,19 @@ export function NoticesPage() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="h-8 w-8 p-0">
-                  <span className="sr-only">Open menu</span>
+                  <span className="sr-only">{t("notices.table.openMenu")}</span>
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                <DropdownMenuItem>View Details</DropdownMenuItem>
-                <DropdownMenuItem>Edit Notice</DropdownMenuItem>
+                <DropdownMenuLabel>{t("notices.menu.actions")}</DropdownMenuLabel>
+                <DropdownMenuItem>{t("notices.menu.viewDetails")}</DropdownMenuItem>
+                <DropdownMenuItem>{t("notices.menu.editNotice")}</DropdownMenuItem>
                 <DropdownMenuSeparator />
                 {notice.status !== "Hidden" ? (
-                  <DropdownMenuItem className="text-destructive">Hide/Delete</DropdownMenuItem>
+                  <DropdownMenuItem className="text-destructive">{t("notices.menu.hideDelete")}</DropdownMenuItem>
                 ) : (
-                  <DropdownMenuItem>Restore</DropdownMenuItem>
+                  <DropdownMenuItem>{t("notices.menu.restore")}</DropdownMenuItem>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
@@ -97,16 +106,16 @@ export function NoticesPage() {
         },
       },
     ],
-    []
+    [t]
   );
 
   return (
     <div className="p-8 space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Notices Management</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t("notices.title")}</h1>
           <p className="text-muted-foreground mt-2">
-            Monitor and manage missing animal notices.
+            {t("notices.description")}
           </p>
         </div>
       </div>

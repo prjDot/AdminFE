@@ -4,6 +4,7 @@ import { DataTable } from "@/widgets/data-table/ui/data-table";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { MoreHorizontal } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,35 +31,44 @@ const mockUsers: User[] = [
 ];
 
 export function UsersPage() {
+  const { t } = useTranslation();
+
   const columns = useMemo<ColumnDef<User>[]>(
     () => [
       {
         accessorKey: "name",
-        header: "Name",
+        header: t("users.table.name"),
       },
       {
         accessorKey: "email",
-        header: "Email",
+        header: t("users.table.email"),
       },
       {
         accessorKey: "role",
-        header: "Role",
+        header: t("users.table.role"),
       },
       {
         accessorKey: "status",
-        header: "Status",
+        header: t("users.table.status"),
         cell: ({ row }) => {
-          const status = row.getValue("status") as string;
+          const status = row.getValue("status") as User["status"];
           const variant = 
             status === "Active" ? "default" : 
             status === "Suspended" ? "destructive" : "secondary";
-          
-          return <Badge variant={variant}>{status}</Badge>;
+
+          const statusLabel =
+            status === "Active"
+              ? t("common.status.active")
+              : status === "Suspended"
+                ? t("common.status.suspended")
+                : t("common.status.inactive");
+
+          return <Badge variant={variant}>{statusLabel}</Badge>;
         },
       },
       {
         accessorKey: "createdAt",
-        header: "Joined",
+        header: t("users.table.joined"),
       },
       {
         id: "actions",
@@ -69,22 +79,22 @@ export function UsersPage() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="h-8 w-8 p-0">
-                  <span className="sr-only">Open menu</span>
+                  <span className="sr-only">{t("users.table.openMenu")}</span>
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                <DropdownMenuLabel>{t("users.menu.actions")}</DropdownMenuLabel>
                 <DropdownMenuItem onClick={() => navigator.clipboard.writeText(user.id)}>
-                  Copy User ID
+                  {t("users.menu.copyUserId")}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>View Profile</DropdownMenuItem>
-                <DropdownMenuItem>Change Role</DropdownMenuItem>
+                <DropdownMenuItem>{t("users.menu.viewProfile")}</DropdownMenuItem>
+                <DropdownMenuItem>{t("users.menu.changeRole")}</DropdownMenuItem>
                 {user.status === "Suspended" ? (
-                  <DropdownMenuItem>Unsuspend Account</DropdownMenuItem>
+                  <DropdownMenuItem>{t("users.menu.unsuspend")}</DropdownMenuItem>
                 ) : (
-                  <DropdownMenuItem className="text-destructive">Suspend Account</DropdownMenuItem>
+                  <DropdownMenuItem className="text-destructive">{t("users.menu.suspend")}</DropdownMenuItem>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
@@ -92,19 +102,19 @@ export function UsersPage() {
         },
       },
     ],
-    []
+    [t]
   );
 
   return (
     <div className="p-8 space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Users Management</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t("users.title")}</h1>
           <p className="text-muted-foreground mt-2">
-            Manage user accounts, roles, and restrictions.
+            {t("users.description")}
           </p>
         </div>
-        <Button>Invite Admin</Button>
+        <Button>{t("common.actions.inviteAdmin")}</Button>
       </div>
 
       <div className="bg-card rounded-xl">

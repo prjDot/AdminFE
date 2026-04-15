@@ -11,7 +11,9 @@
     // Bundler mode
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
     "verbatimModuleSyntax": true,
+    "ignoreDeprecations": "6.0",
     "noEmit": true,
 
     // Best practices

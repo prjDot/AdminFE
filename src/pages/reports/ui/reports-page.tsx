@@ -4,6 +4,7 @@ import { DataTable } from "@/widgets/data-table/ui/data-table";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { MoreHorizontal } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,20 +30,22 @@ const mockReports: Report[] = [
 ];
 
 export function ReportsPage() {
+  const { t } = useTranslation();
+
   const columns = useMemo<ColumnDef<Report>[]>(
     () => [
       {
         accessorKey: "targetType",
-        header: "Target Type",
+        header: t("reports.table.targetType"),
         cell: ({ row }) => <span className="font-medium">{row.getValue("targetType")}</span>,
       },
       {
         accessorKey: "reason",
-        header: "Primary Reason",
+        header: t("reports.table.primaryReason"),
       },
       {
         accessorKey: "reporterCount",
-        header: "Reports",
+        header: t("reports.table.reports"),
         cell: ({ row }) => {
           const count = row.getValue("reporterCount") as number;
           return <Badge variant={count > 3 ? "destructive" : "secondary"}>{count}</Badge>;
@@ -50,19 +53,26 @@ export function ReportsPage() {
       },
       {
         accessorKey: "status",
-        header: "Status",
+        header: t("reports.table.status"),
         cell: ({ row }) => {
-          const status = row.getValue("status") as string;
+          const status = row.getValue("status") as Report["status"];
           const variant = 
             status === "Pending" ? "destructive" : 
             status === "Action Taken" ? "default" : "secondary";
-          
-          return <Badge variant={variant}>{status}</Badge>;
+
+          const label =
+            status === "Pending"
+              ? t("common.status.pending")
+              : status === "Action Taken"
+                ? t("common.status.actionTaken")
+                : t("common.status.reviewed");
+
+          return <Badge variant={variant}>{label}</Badge>;
         },
       },
       {
         accessorKey: "lastReportedAt",
-        header: "Last Reported",
+        header: t("reports.table.lastReported"),
       },
       {
         id: "actions",
@@ -73,19 +83,19 @@ export function ReportsPage() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="h-8 w-8 p-0">
-                  <span className="sr-only">Open menu</span>
+                  <span className="sr-only">{t("reports.table.openMenu")}</span>
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                <DropdownMenuItem>View Target Item</DropdownMenuItem>
-                <DropdownMenuItem>Review Reporters</DropdownMenuItem>
+                <DropdownMenuLabel>{t("reports.menu.actions")}</DropdownMenuLabel>
+                <DropdownMenuItem>{t("reports.menu.viewTarget")}</DropdownMenuItem>
+                <DropdownMenuItem>{t("reports.menu.reviewReporters")}</DropdownMenuItem>
                 <DropdownMenuSeparator />
                 {report.status === "Pending" && (
                   <>
-                    <DropdownMenuItem className="text-destructive">Delete Target & Warn</DropdownMenuItem>
-                    <DropdownMenuItem>Dismiss Report</DropdownMenuItem>
+                    <DropdownMenuItem className="text-destructive">{t("reports.menu.deleteWarn")}</DropdownMenuItem>
+                    <DropdownMenuItem>{t("reports.menu.dismiss")}</DropdownMenuItem>
                   </>
                 )}
               </DropdownMenuContent>
@@ -94,16 +104,16 @@ export function ReportsPage() {
         },
       },
     ],
-    []
+    [t]
   );
 
   return (
     <div className="p-8 space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Reports Management</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t("reports.title")}</h1>
           <p className="text-muted-foreground mt-2">
-            Review user-reported content and take necessary actions.
+            {t("reports.description")}
           </p>
         </div>
       </div>

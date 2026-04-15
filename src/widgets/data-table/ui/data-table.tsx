@@ -15,6 +15,7 @@ import {
   TableRow,
 } from "@/shared/ui/table";
 import { Button } from "@/shared/ui/button";
+import { useTranslation } from "react-i18next";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -25,6 +26,8 @@ export function DataTable<TData, TValue>({
   columns,
   data,
 }: DataTableProps<TData, TValue>) {
+  const { t } = useTranslation();
+
   const table = useReactTable({
     data,
     columns,
@@ -74,7 +77,7 @@ export function DataTable<TData, TValue>({
                   colSpan={columns.length}
                   className="h-24 text-center"
                 >
-                  No results.
+                  {t("table.noResults")}
                 </TableCell>
               </TableRow>
             )}
@@ -88,7 +91,7 @@ export function DataTable<TData, TValue>({
           onClick={() => table.previousPage()}
           disabled={!table.getCanPreviousPage()}
         >
-          Previous
+          {t("common.actions.previous")}
         </Button>
         <Button
           variant="outline"
@@ -96,7 +99,7 @@ export function DataTable<TData, TValue>({
           onClick={() => table.nextPage()}
           disabled={!table.getCanNextPage()}
         >
-          Next
+          {t("common.actions.next")}
         </Button>
       </div>
     </div>

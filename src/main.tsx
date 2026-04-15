@@ -1,14 +1,14 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
-import "@/app/styles/globals.css";
+import "../styles/globals.css";
 import { RouterProvider } from "react-router-dom";
-import { AppQueryClientProvider } from "@/app/providers/query-client";
+import { AppProviders } from "@/app/providers/app-providers";
 import { router } from "@/app/router";
 
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <AppQueryClientProvider>
+    <AppProviders>
       <RouterProvider router={router} />
-    </AppQueryClientProvider>
+    </AppProviders>
   </React.StrictMode>
 );

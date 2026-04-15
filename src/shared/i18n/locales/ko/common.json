@@ -1,0 +1,227 @@
+{
+  "common": {
+    "appName": "PawGen Admin",
+    "actions": {
+      "cancel": "취소",
+      "saveChanges": "변경사항 저장",
+      "logout": "로그아웃",
+      "previous": "이전",
+      "next": "다음",
+      "close": "닫기",
+      "retry": "재시도",
+      "editMode": "편집 모드",
+      "forceSyncNow": "지금 동기화",
+      "inviteAdmin": "관리자 초대",
+      "manageCategories": "카테고리 관리",
+      "sendNotification": "알림 발송"
+    },
+    "status": {
+      "active": "활성",
+      "inactive": "비활성",
+      "suspended": "정지",
+      "lost": "실종",
+      "found": "발견",
+      "hidden": "숨김",
+      "pending": "대기",
+      "reviewed": "검토 완료",
+      "actionTaken": "조치 완료",
+      "success": "성공",
+      "connected": "연결됨"
+    },
+    "theme": {
+      "label": "테마",
+      "light": "라이트",
+      "dark": "다크",
+      "system": "시스템"
+    },
+    "language": {
+      "label": "언어",
+      "ko": "한국어",
+      "en": "영어"
+    }
+  },
+  "sidebar": {
+    "overview": "개요",
+    "management": "운영",
+    "systemLogs": "시스템 & 로그",
+    "dashboard": "대시보드",
+    "users": "사용자",
+    "notices": "실종 공고",
+    "community": "커뮤니티",
+    "reports": "신고",
+    "notifications": "알림",
+    "services": "서비스 & API",
+    "audit": "감사 로그",
+    "settings": "설정"
+  },
+  "header": {
+    "welcome": "환영합니다, {{name}}",
+    "fallbackAdmin": "관리자"
+  },
+  "login": {
+    "title": "관리자 로그인",
+    "username": "아이디",
+    "password": "비밀번호",
+    "signIn": "로그인"
+  },
+  "dashboard": {
+    "title": "대시보드 개요",
+    "description": "PawGen 서비스 핵심 지표를 모니터링합니다.",
+    "summary": {
+      "totalUsers": "전체 사용자",
+      "activeNotices": "활성 공고",
+      "unresolvedReports": "미해결 신고",
+      "resolvedCases": "해결된 케이스",
+      "fromLastMonth": "지난달 대비",
+      "fromLastWeek": "지난주 대비"
+    },
+    "charts": {
+      "newNotices": "최근 7일 신규 공고",
+      "reports": "최근 7일 신고 접수",
+      "day": "{{day}}일"
+    }
+  },
+  "users": {
+    "title": "사용자 관리",
+    "description": "사용자 계정, 권한, 제재 상태를 관리합니다.",
+    "table": {
+      "name": "이름",
+      "email": "이메일",
+      "role": "권한",
+      "status": "상태",
+      "joined": "가입일",
+      "actions": "작업",
+      "openMenu": "메뉴 열기"
+    },
+    "menu": {
+      "actions": "작업",
+      "copyUserId": "사용자 ID 복사",
+      "viewProfile": "프로필 보기",
+      "changeRole": "권한 변경",
+      "unsuspend": "정지 해제",
+      "suspend": "계정 정지"
+    }
+  },
+  "notices": {
+    "title": "공고 관리",
+    "description": "실종/발견 공고를 모니터링하고 운영합니다.",
+    "table": {
+      "title": "제목",
+      "type": "동물 유형",
+      "status": "상태",
+      "reporter": "작성자",
+      "reportedDate": "등록일",
+      "actions": "작업",
+      "openMenu": "메뉴 열기"
+    },
+    "menu": {
+      "actions": "작업",
+      "viewDetails": "상세 보기",
+      "editNotice": "공고 수정",
+      "hideDelete": "숨김/삭제",
+      "restore": "복구"
+    }
+  },
+  "community": {
+    "title": "커뮤니티 관리",
+    "description": "게시글, 카테고리, 태그를 운영합니다.",
+    "table": {
+      "title": "제목",
+      "author": "작성자",
+      "category": "카테고리",
+      "replies": "댓글",
+      "postedDate": "작성일",
+      "actions": "작업",
+      "openMenu": "메뉴 열기"
+    },
+    "menu": {
+      "actions": "작업",
+      "viewPostReplies": "게시글/댓글 보기",
+      "viewPollResults": "투표 결과 보기",
+      "deletePost": "게시글 삭제"
+    }
+  },
+  "reports": {
+    "title": "신고 관리",
+    "description": "사용자 신고를 검토하고 조치합니다.",
+    "table": {
+      "targetType": "대상 유형",
+      "primaryReason": "주요 사유",
+      "reports": "신고 수",
+      "status": "상태",
+      "lastReported": "최종 신고일",
+      "actions": "작업",
+      "openMenu": "메뉴 열기"
+    },
+    "menu": {
+      "actions": "작업",
+      "viewTarget": "대상 항목 보기",
+      "reviewReporters": "신고자 보기",
+      "deleteWarn": "삭제 후 경고",
+      "dismiss": "신고 기각"
+    }
+  },
+  "notifications": {
+    "title": "푸시 알림",
+    "description": "FCM 발송 이력 관리와 수동 브로드캐스트 발송을 제공합니다.",
+    "sendCardTitle": "수동 푸시 발송",
+    "targetAudience": "대상",
+    "targetAll": "전체 사용자",
+    "targetActive": "활성 사용자",
+    "targetSpecific": "특정 사용자 ID",
+    "titleField": "제목",
+    "messageBody": "메시지 본문",
+    "titlePlaceholder": "예: 긴급 실종 알림",
+    "messagePlaceholder": "푸시 메시지를 입력하세요...",
+    "historyTitle": "최근 브로드캐스트",
+    "systemMaintenanceAlert": "시스템 점검 안내",
+    "foundDogNearby": "근처에서 강아지를 발견했어요!",
+    "mockBody": "발송된 알림 본문 예시입니다.",
+    "targetLine": "대상: 전체 사용자",
+    "delivered": "{{count}}건 전달"
+  },
+  "services": {
+    "title": "외부 서비스 & API",
+    "description": "국가동물보호 API 연동과 이미지 분석 큐를 모니터링합니다.",
+    "apiStatus": "보호소 API 상태",
+    "photoQueue": "이미지 분석 큐",
+    "recentFailures": "최근 API 실패",
+    "endpoint": "엔드포인트",
+    "lastSync": "최근 동기화",
+    "syncRate": "동기화 주기",
+    "tenMinsAgo": "10분 전",
+    "everyHour": "1시간마다",
+    "queuePending": "{{count}}건 대기",
+    "failedMinsAgo": "{{count}}분 전 실패",
+    "noErrors": "최근 오류가 없습니다. 네트워크 상태가 정상입니다."
+  },
+  "audit": {
+    "title": "감사 로그",
+    "description": "시스템 내 관리자 작업 이력을 추적하고 검토합니다.",
+    "table": {
+      "timestamp": "시각",
+      "adminUser": "관리자",
+      "action": "작업",
+      "targetEntity": "대상",
+      "ipAddress": "IP 주소"
+    }
+  },
+  "settings": {
+    "title": "시스템 설정",
+    "description": "전역 파라미터, 외부 API 키, 기준 데이터를 설정합니다.",
+    "generalTitle": "기본 정보",
+    "integrationTitle": "연동 & API 키",
+    "integrationDesc": "키 변경 시 관련 서비스에 짧은 다운타임이 발생할 수 있습니다.",
+    "baseDataTitle": "기준 데이터 관리",
+    "serviceName": "서비스명",
+    "supportEmail": "지원 이메일",
+    "fcmServerKey": "FCM 서버 키",
+    "shelterApiUrl": "보호소 API URL",
+    "animalTypes": "동물/품종 사전",
+    "regionCodes": "지역 코드 매핑",
+    "noticeStatusLabels": "공고 상태 라벨"
+  },
+  "table": {
+    "noResults": "결과가 없습니다."
+  }
+}

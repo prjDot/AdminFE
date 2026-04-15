@@ -1,0 +1,227 @@
+{
+  "common": {
+    "appName": "PawGen Admin",
+    "actions": {
+      "cancel": "Cancel",
+      "saveChanges": "Save Changes",
+      "logout": "Logout",
+      "previous": "Previous",
+      "next": "Next",
+      "close": "Close",
+      "retry": "Retry",
+      "editMode": "Edit Mode",
+      "forceSyncNow": "Force Sync Now",
+      "inviteAdmin": "Invite Admin",
+      "manageCategories": "Manage Categories",
+      "sendNotification": "Send Notification"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "suspended": "Suspended",
+      "lost": "Lost",
+      "found": "Found",
+      "hidden": "Hidden",
+      "pending": "Pending",
+      "reviewed": "Reviewed",
+      "actionTaken": "Action Taken",
+      "success": "Success",
+      "connected": "Connected"
+    },
+    "theme": {
+      "label": "Theme",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    },
+    "language": {
+      "label": "Language",
+      "ko": "Korean",
+      "en": "English"
+    }
+  },
+  "sidebar": {
+    "overview": "Overview",
+    "management": "Management",
+    "systemLogs": "System & Logs",
+    "dashboard": "Dashboard",
+    "users": "Users",
+    "notices": "Notices",
+    "community": "Community",
+    "reports": "Reports",
+    "notifications": "Notifications",
+    "services": "Services & API",
+    "audit": "Audit Logs",
+    "settings": "Settings"
+  },
+  "header": {
+    "welcome": "Welcome, {{name}}",
+    "fallbackAdmin": "Admin"
+  },
+  "login": {
+    "title": "Admin Login",
+    "username": "Username",
+    "password": "Password",
+    "signIn": "Sign In"
+  },
+  "dashboard": {
+    "title": "Dashboard Overview",
+    "description": "Monitor key metrics for the PawGen service.",
+    "summary": {
+      "totalUsers": "Total Users",
+      "activeNotices": "Active Notices",
+      "unresolvedReports": "Unresolved Reports",
+      "resolvedCases": "Resolved Cases",
+      "fromLastMonth": "from last month",
+      "fromLastWeek": "from last week"
+    },
+    "charts": {
+      "newNotices": "New Notices (Last 7 Days)",
+      "reports": "Reports Received (Last 7 Days)",
+      "day": "Day {{day}}"
+    }
+  },
+  "users": {
+    "title": "Users Management",
+    "description": "Manage user accounts, roles, and restrictions.",
+    "table": {
+      "name": "Name",
+      "email": "Email",
+      "role": "Role",
+      "status": "Status",
+      "joined": "Joined",
+      "actions": "Actions",
+      "openMenu": "Open menu"
+    },
+    "menu": {
+      "actions": "Actions",
+      "copyUserId": "Copy User ID",
+      "viewProfile": "View Profile",
+      "changeRole": "Change Role",
+      "unsuspend": "Unsuspend Account",
+      "suspend": "Suspend Account"
+    }
+  },
+  "notices": {
+    "title": "Notices Management",
+    "description": "Monitor and manage missing animal notices.",
+    "table": {
+      "title": "Title",
+      "type": "Type",
+      "status": "Status",
+      "reporter": "Reporter",
+      "reportedDate": "Reported Date",
+      "actions": "Actions",
+      "openMenu": "Open menu"
+    },
+    "menu": {
+      "actions": "Actions",
+      "viewDetails": "View Details",
+      "editNotice": "Edit Notice",
+      "hideDelete": "Hide/Delete",
+      "restore": "Restore"
+    }
+  },
+  "community": {
+    "title": "Community Management",
+    "description": "Moderate community discussions, categories, and tags.",
+    "table": {
+      "title": "Title",
+      "author": "Author",
+      "category": "Category",
+      "replies": "Replies",
+      "postedDate": "Posted Date",
+      "actions": "Actions",
+      "openMenu": "Open menu"
+    },
+    "menu": {
+      "actions": "Actions",
+      "viewPostReplies": "View Post & Replies",
+      "viewPollResults": "View Poll Results (if any)",
+      "deletePost": "Delete Post"
+    }
+  },
+  "reports": {
+    "title": "Reports Management",
+    "description": "Review user-reported content and take necessary actions.",
+    "table": {
+      "targetType": "Target Type",
+      "primaryReason": "Primary Reason",
+      "reports": "Reports",
+      "status": "Status",
+      "lastReported": "Last Reported",
+      "actions": "Actions",
+      "openMenu": "Open menu"
+    },
+    "menu": {
+      "actions": "Actions",
+      "viewTarget": "View Target Item",
+      "reviewReporters": "Review Reporters",
+      "deleteWarn": "Delete Target & Warn",
+      "dismiss": "Dismiss Report"
+    }
+  },
+  "notifications": {
+    "title": "Push Notifications",
+    "description": "Manage Firebase Cloud Messaging history and send manual broadcasts.",
+    "sendCardTitle": "Send Manual Push",
+    "targetAudience": "Target Audience",
+    "targetAll": "All Users",
+    "targetActive": "Active App Users Only",
+    "targetSpecific": "Specific User IDs",
+    "titleField": "Title",
+    "messageBody": "Message Body",
+    "titlePlaceholder": "e.g. Urgent Missing Report",
+    "messagePlaceholder": "Enter the push message...",
+    "historyTitle": "Recent Broadcasts",
+    "systemMaintenanceAlert": "System Maintenance Alert",
+    "foundDogNearby": "Found Dog nearby!",
+    "mockBody": "This is the body of the notification that was sent out.",
+    "targetLine": "Target: All Users",
+    "delivered": "{{count}} Delivered"
+  },
+  "services": {
+    "title": "External Services & API",
+    "description": "Monitor national shelter API integration and photo analysis queue.",
+    "apiStatus": "Shelter API Status",
+    "photoQueue": "Photo Analysis Queue",
+    "recentFailures": "Recent API Failures",
+    "endpoint": "Endpoint",
+    "lastSync": "Last Sync",
+    "syncRate": "Sync Rate",
+    "tenMinsAgo": "10 mins ago",
+    "everyHour": "Every 1 hour",
+    "queuePending": "{{count}} Pending",
+    "failedMinsAgo": "Failed {{count}} mins ago",
+    "noErrors": "No recent errors logged. Network is healthy."
+  },
+  "audit": {
+    "title": "Audit Logs",
+    "description": "Track and review all administrative actions in the system.",
+    "table": {
+      "timestamp": "Timestamp",
+      "adminUser": "Admin User",
+      "action": "Action",
+      "targetEntity": "Target Entity",
+      "ipAddress": "IP Address"
+    }
+  },
+  "settings": {
+    "title": "System Settings",
+    "description": "Configure global parameters, external API keys, and base data.",
+    "generalTitle": "General Information",
+    "integrationTitle": "Integrations & API Keys",
+    "integrationDesc": "Updating these keys may cause brief downtime in related services.",
+    "baseDataTitle": "Base Data Management",
+    "serviceName": "Service Name",
+    "supportEmail": "Support Email",
+    "fcmServerKey": "FCM Server Key",
+    "shelterApiUrl": "Shelter API URL",
+    "animalTypes": "Animal Types / Breeds Dictionary",
+    "regionCodes": "Region Codes Mapping",
+    "noticeStatusLabels": "Notice Status Labels"
+  },
+  "table": {
+    "noResults": "No results."
+  }
+}

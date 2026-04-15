@@ -3,6 +3,7 @@ import { type ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/widgets/data-table/ui/data-table";
 import { Badge } from "@/shared/ui/badge";
 import { History } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface AuditLog {
   id: string;
@@ -21,21 +22,23 @@ const mockLogs: AuditLog[] = [
 ];
 
 export function AuditPage() {
+  const { t } = useTranslation();
+
   const columns = useMemo<ColumnDef<AuditLog>[]>(
     () => [
       {
         accessorKey: "timestamp",
-        header: "Timestamp",
+        header: t("audit.table.timestamp"),
         cell: ({ row }) => <span className="text-muted-foreground whitespace-nowrap">{row.getValue("timestamp")}</span>,
       },
       {
         accessorKey: "adminName",
-        header: "Admin User",
+        header: t("audit.table.adminUser"),
         cell: ({ row }) => <span className="font-medium">{row.getValue("adminName")}</span>,
       },
       {
         accessorKey: "action",
-        header: "Action",
+        header: t("audit.table.action"),
         cell: ({ row }) => {
           const action = row.getValue("action") as string;
           const isDestructive = action.includes("Delete") || action.includes("Suspend") || action.includes("Hidden");
@@ -44,24 +47,24 @@ export function AuditPage() {
       },
       {
         accessorKey: "target",
-        header: "Target Entity",
+        header: t("audit.table.targetEntity"),
       },
       {
         accessorKey: "ipAddress",
-        header: "IP Address",
+        header: t("audit.table.ipAddress"),
         cell: ({ row }) => <span className="font-mono text-xs">{row.getValue("ipAddress")}</span>,
       },
     ],
-    []
+    [t]
   );
 
   return (
     <div className="p-8 space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Audit Logs</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t("audit.title")}</h1>
           <p className="text-muted-foreground mt-2">
-            Track and review all administrative actions taken in the system.
+            {t("audit.description")}
           </p>
         </div>
         <div className="p-3 bg-muted rounded-full">

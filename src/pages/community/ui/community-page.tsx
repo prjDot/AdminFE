@@ -4,6 +4,7 @@ import { DataTable } from "@/widgets/data-table/ui/data-table";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { MoreHorizontal, MessageSquare } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,11 +30,13 @@ const mockPosts: CommunityPost[] = [
 ];
 
 export function CommunityPage() {
+  const { t } = useTranslation();
+
   const columns = useMemo<ColumnDef<CommunityPost>[]>(
     () => [
       {
         accessorKey: "title",
-        header: "Title",
+        header: t("community.table.title"),
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
             <MessageSquare className="w-4 h-4 text-muted-foreground mr-1" />
@@ -43,20 +46,20 @@ export function CommunityPage() {
       },
       {
         accessorKey: "author",
-        header: "Author",
+        header: t("community.table.author"),
       },
       {
         accessorKey: "category",
-        header: "Category",
+        header: t("community.table.category"),
         cell: ({ row }) => <Badge variant="outline">{row.getValue("category")}</Badge>,
       },
       {
         accessorKey: "replies",
-        header: "Replies",
+        header: t("community.table.replies"),
       },
       {
         accessorKey: "date",
-        header: "Posted Date",
+        header: t("community.table.postedDate"),
       },
       {
         id: "actions",
@@ -65,35 +68,35 @@ export function CommunityPage() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="h-8 w-8 p-0">
-                  <span className="sr-only">Open menu</span>
+                  <span className="sr-only">{t("community.table.openMenu")}</span>
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                <DropdownMenuItem>View Post & Replies</DropdownMenuItem>
-                <DropdownMenuItem>View Poll Results (if any)</DropdownMenuItem>
+                <DropdownMenuLabel>{t("community.menu.actions")}</DropdownMenuLabel>
+                <DropdownMenuItem>{t("community.menu.viewPostReplies")}</DropdownMenuItem>
+                <DropdownMenuItem>{t("community.menu.viewPollResults")}</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-destructive">Delete Post</DropdownMenuItem>
+                <DropdownMenuItem className="text-destructive">{t("community.menu.deletePost")}</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           );
         },
       },
     ],
-    []
+    [t]
   );
 
   return (
     <div className="p-8 space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Community Management</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t("community.title")}</h1>
           <p className="text-muted-foreground mt-2">
-            Moderate community discussions, categories, and tags.
+            {t("community.description")}
           </p>
         </div>
-        <Button variant="outline">Manage Categories</Button>
+        <Button variant="outline">{t("common.actions.manageCategories")}</Button>
       </div>
 
       <div className="bg-card rounded-xl">
