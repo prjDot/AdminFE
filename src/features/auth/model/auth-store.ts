@@ -1,9 +1,17 @@
 import { create } from "zustand";
 
+export type AdminRole = "SUPER_ADMIN" | "REPORT_MANAGER" | "COMMUNITY_MANAGER";
+
+interface AdminUser {
+  id: string;
+  name: string;
+  role: AdminRole;
+}
+
 interface AuthState {
   isAuthenticated: boolean;
-  admin: { name: string; role: string } | null;
-  setAuth: (admin: { name: string; role: string }) => void;
+  admin: AdminUser | null;
+  setAuth: (admin: AdminUser) => void;
   logout: () => void;
 }
 

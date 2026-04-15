@@ -9,7 +9,7 @@ export function LoginPage() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    setAuth({ name: "Admin User", role: "admin" });
+    setAuth({ id: "admin-1", name: "Super Admin", role: "SUPER_ADMIN" });
     navigate("/dashboard");
   };
 
