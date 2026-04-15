@@ -15,6 +15,7 @@
       "manageCategories": "Manage Categories",
       "sendNotification": "Send Notification"
     },
+    "loading": "Loading...",
     "feedback": {
       "saved": "Settings have been saved.",
       "sent": "Notification request has been queued.",
@@ -44,6 +45,15 @@
       "ko": "Korean",
       "en": "English"
     }
+  },
+  "errors": {
+    "unexpected": "Unexpected Error",
+    "genericTitle": "Something went wrong",
+    "genericDescription": "An error occurred while processing your request. Please try again.",
+    "notFoundTitle": "Page Not Found",
+    "notFoundDescription": "The requested route does not exist or has been moved.",
+    "goBack": "Go Back",
+    "goDashboard": "Go to Dashboard"
   },
   "sidebar": {
     "overview": "Overview",

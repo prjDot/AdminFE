@@ -1,29 +1,43 @@
+import type { ComponentType } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
-import { AdminLayout } from "@/widgets/layout/ui/admin-layout";
-import { LoginPage } from "@/pages/login/ui/login-page";
-import { OTPPage } from "@/pages/otp/ui/otp-page";
-import { DashboardPage } from "@/pages/dashboard/ui/dashboard-page";
-import { UsersPage } from "@/pages/users/ui/users-page";
-import { NoticesPage } from "@/pages/notices/ui/notices-page";
-import { CommunityPage } from "@/pages/community/ui/community-page";
-import { ReportsPage } from "@/pages/reports/ui/reports-page";
-import { NotificationsPage } from "@/pages/notifications/ui/notifications-page";
-import { ServicesPage } from "@/pages/services/ui/services-page";
-import { AuditPage } from "@/pages/audit/ui/audit-page";
-import { SettingsPage } from "@/pages/settings/ui/settings-page";
+import { RouteErrorPage } from "@/pages/error/ui/route-error-page";
+import { RoutePending } from "@/shared/ui/route-pending";
+
+const lazyComponent = <TModule,>(
+  importer: () => Promise<TModule>,
+  select: (module: TModule) => ComponentType
+) => async () => {
+  const module = await importer();
+  return { Component: select(module) };
+};
 
 export const router = createBrowserRouter([
   {
     path: "/login",
-    element: <LoginPage />,
+    HydrateFallback: RoutePending,
+    errorElement: <RouteErrorPage />,
+    lazy: lazyComponent(
+      () => import("@/pages/login/ui/login-page"),
+      (module) => module.LoginPage
+    ),
   },
   {
     path: "/login/mfa",
-    element: <OTPPage />,
+    HydrateFallback: RoutePending,
+    errorElement: <RouteErrorPage />,
+    lazy: lazyComponent(
+      () => import("@/pages/otp/ui/otp-page"),
+      (module) => module.OTPPage
+    ),
   },
   {
     path: "/",
-    element: <AdminLayout />,
+    HydrateFallback: RoutePending,
+    errorElement: <RouteErrorPage />,
+    lazy: lazyComponent(
+      () => import("@/widgets/layout/ui/admin-layout"),
+      (module) => module.AdminLayout
+    ),
     children: [
       {
         index: true,
@@ -31,39 +45,73 @@ export const router = createBrowserRouter([
       },
       {
         path: "dashboard",
-        element: <DashboardPage />,
+        lazy: lazyComponent(
+          () => import("@/pages/dashboard/ui/dashboard-page"),
+          (module) => module.DashboardPage
+        ),
       },
       {
         path: "users",
-        element: <UsersPage />,
+        lazy: lazyComponent(
+          () => import("@/pages/users/ui/users-page"),
+          (module) => module.UsersPage
+        ),
       },
       {
         path: "notices",
-        element: <NoticesPage />,
+        lazy: lazyComponent(
+          () => import("@/pages/notices/ui/notices-page"),
+          (module) => module.NoticesPage
+        ),
       },
       {
         path: "community",
-        element: <CommunityPage />,
+        lazy: lazyComponent(
+          () => import("@/pages/community/ui/community-page"),
+          (module) => module.CommunityPage
+        ),
       },
       {
         path: "reports",
-        element: <ReportsPage />,
+        lazy: lazyComponent(
+          () => import("@/pages/reports/ui/reports-page"),
+          (module) => module.ReportsPage
+        ),
       },
       {
         path: "notifications",
-        element: <NotificationsPage />,
+        lazy: lazyComponent(
+          () => import("@/pages/notifications/ui/notifications-page"),
+          (module) => module.NotificationsPage
+        ),
       },
       {
         path: "services",
-        element: <ServicesPage />,
+        lazy: lazyComponent(
+          () => import("@/pages/services/ui/services-page"),
+          (module) => module.ServicesPage
+        ),
       },
       {
         path: "audit",
-        element: <AuditPage />,
+        lazy: lazyComponent(
+          () => import("@/pages/audit/ui/audit-page"),
+          (module) => module.AuditPage
+        ),
       },
       {
         path: "settings",
-        element: <SettingsPage />,
+        lazy: lazyComponent(
+          () => import("@/pages/settings/ui/settings-page"),
+          (module) => module.SettingsPage
+        ),
+      },
+      {
+        path: "*",
+        lazy: lazyComponent(
+          () => import("@/pages/error/ui/not-found-page"),
+          (module) => module.NotFoundPage
+        ),
       },
     ],
   },
