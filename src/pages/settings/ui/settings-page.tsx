@@ -3,7 +3,7 @@ import { Input } from "@/shared/ui/input";
 import { Settings2, Save } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
-import { useUiPreferencesStore, type LanguageCode, type ThemeMode } from "@/features/preferences/model/ui-preferences-store";
+import { useUiPreferencesStore, type LanguageCode } from "@/features/preferences/model/ui-preferences-store";
 import { i18n } from "@/shared/i18n/config";
 import { useTheme } from "next-themes";
 import { useEffect } from "react";
@@ -12,17 +12,13 @@ export function SettingsPage() {
   const { t } = useTranslation();
   const language = useUiPreferencesStore((state) => state.language);
   const setLanguage = useUiPreferencesStore((state) => state.setLanguage);
-  const theme = useUiPreferencesStore((state) => state.theme);
-  const setTheme = useUiPreferencesStore((state) => state.setTheme);
-  const { setTheme: setNextTheme } = useTheme();
+  const { setTheme, theme } = useTheme();
 
   useEffect(() => {
     void i18n.changeLanguage(language);
   }, [language]);
 
-  useEffect(() => {
-    setNextTheme(theme);
-  }, [setNextTheme, theme]);
+  const currentTheme = theme === "light" || theme === "dark" || theme === "system" ? theme : "system";
 
   const { register, handleSubmit } = useForm({
     defaultValues: {
@@ -73,8 +69,8 @@ export function SettingsPage() {
               <label className="text-sm font-medium md:col-span-1">{t("common.theme.label")}</label>
               <div className="md:col-span-3">
                 <select
-                  value={theme}
-                  onChange={(event) => setTheme(event.target.value as ThemeMode)}
+                  value={currentTheme}
+                  onChange={(event) => setTheme(event.target.value)}
                   className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 >
                   <option value="light">{t("common.theme.light")}</option>
