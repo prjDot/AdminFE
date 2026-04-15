@@ -4,8 +4,10 @@ import { Input } from "@/shared/ui/input";
 import { useAuthStore } from "@/features/auth/model/auth-store";
 import { useNavigate, Navigate } from "react-router-dom";
 import { ROLES } from "@/shared/config/constants";
+import { useTranslation } from "react-i18next";
 
 export function OTPPage() {
+  const { t } = useTranslation();
   const [code, setCode] = useState("");
   const { step, tempEmail, verifyOTP } = useAuthStore();
   const navigate = useNavigate();
@@ -36,14 +38,14 @@ export function OTPPage() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-muted">
       <div className="p-8 bg-card rounded-lg shadow-sm border w-full max-w-sm">
-        <h1 className="text-2xl font-bold mb-2 text-center">2-Step Verification</h1>
+        <h1 className="text-2xl font-bold mb-2 text-center">{t("otp.title")}</h1>
         <p className="text-sm text-muted-foreground text-center mb-6">
-          Enter the 6-digit code from your authenticator app for <strong>{tempEmail}</strong>.
+          {t("otp.description")} <strong>{tempEmail}</strong>.
         </p>
         <form onSubmit={handleVerify} className="space-y-4">
           <Input 
             type="text" 
-            placeholder="000000" 
+            placeholder={t("otp.codePlaceholder")} 
             value={code}
             onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
             maxLength={6}
@@ -51,11 +53,11 @@ export function OTPPage() {
             className="text-center text-2xl tracking-[0.5em] font-mono h-14"
           />
           <Button type="submit" className="w-full h-11" disabled={code.length < 6}>
-            Verify
+            {t("otp.verify")}
           </Button>
         </form>
         <p className="text-xs text-muted-foreground text-center mt-4">
-          테스트: 아무 6자리 숫자나 입력하세요
+          {t("otp.testingHint")}
         </p>
       </div>
     </div>

@@ -69,6 +69,13 @@
     "password": "비밀번호",
     "signIn": "로그인"
   },
+  "otp": {
+    "title": "2단계 인증",
+    "description": "인증 앱의 6자리 코드를 입력하세요:",
+    "codePlaceholder": "000000",
+    "verify": "인증하기",
+    "testingHint": "테스트용으로 임의의 6자리 숫자를 입력해도 됩니다."
+  },
   "dashboard": {
     "title": "대시보드 개요",
     "description": "실시간 운영 지표를 모니터링합니다.",
@@ -142,6 +149,13 @@
       "editNotice": "공고 수정",
       "hideDelete": "숨김/삭제",
       "restore": "복구"
+    },
+    "status": {
+      "lost": "실종",
+      "found": "발견",
+      "resolved": "해결",
+      "hidden": "숨김",
+      "reported": "신고됨"
     }
   },
   "community": {
@@ -181,6 +195,16 @@
       "reviewReporters": "신고자 보기",
       "deleteWarn": "삭제 후 경고",
       "dismiss": "신고 기각"
+    },
+    "status": {
+      "pending": "대기",
+      "reviewing": "검토중",
+      "resolved": "처리완료",
+      "rejected": "기각"
+    },
+    "badges": {
+      "priority": "우선",
+      "autoHidden": "자동 숨김"
     }
   },
   "notifications": {

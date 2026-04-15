@@ -8,12 +8,30 @@ import { DashboardPriorityPanel } from "@/pages/dashboard/ui/sections/dashboard-
 type Timeframe = "TODAY" | "WEEKLY" | "MONTHLY";
 
 const buildChartData = (timeframe: Timeframe, dayLabel: (day: number) => string) => {
-  const points = timeframe === "TODAY" ? 24 : timeframe === "WEEKLY" ? 7 : 30;
+  if (timeframe === "TODAY") {
+    return Array.from({ length: 24 }).map((_, index) => ({
+      name: `${index}h`,
+      notices: [0, 1, 1, 0, 0, 1, 2, 3, 4, 5, 4, 6, 5, 7, 8, 7, 6, 5, 4, 3, 2, 2, 1, 1][index] ?? 0,
+      reports: [0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 1, 3, 2, 2, 3, 2, 2, 1, 1, 1, 0, 1, 0, 0][index] ?? 0,
+    }));
+  }
 
-  return Array.from({ length: points }).map((_, index) => ({
-    name: timeframe === "TODAY" ? `${index}h` : timeframe === "WEEKLY" ? dayLabel(index + 1) : `D${index + 1}`,
-    notices: Math.floor(Math.random() * (timeframe === "MONTHLY" ? 50 : 10)) + 1,
-    reports: Math.floor(Math.random() * (timeframe === "MONTHLY" ? 20 : 5)),
+  if (timeframe === "WEEKLY") {
+    return [
+      { name: dayLabel(1), notices: 8, reports: 3 },
+      { name: dayLabel(2), notices: 11, reports: 2 },
+      { name: dayLabel(3), notices: 9, reports: 1 },
+      { name: dayLabel(4), notices: 13, reports: 4 },
+      { name: dayLabel(5), notices: 10, reports: 3 },
+      { name: dayLabel(6), notices: 7, reports: 2 },
+      { name: dayLabel(7), notices: 12, reports: 5 },
+    ];
+  }
+
+  return Array.from({ length: 30 }).map((_, index) => ({
+    name: `D${index + 1}`,
+    notices: ((index % 6) + 1) * 3 + (index % 4),
+    reports: (index % 5) + (index % 3),
   }));
 };
 

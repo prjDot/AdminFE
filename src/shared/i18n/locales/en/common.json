@@ -69,6 +69,13 @@
     "password": "Password",
     "signIn": "Sign In"
   },
+  "otp": {
+    "title": "2-Step Verification",
+    "description": "Enter the 6-digit code from your authenticator app for",
+    "codePlaceholder": "000000",
+    "verify": "Verify",
+    "testingHint": "For testing, any 6-digit number is accepted."
+  },
   "dashboard": {
     "title": "Dashboard Overview",
     "description": "Monitor real-time service operations.",
@@ -142,6 +149,13 @@
       "editNotice": "Edit Notice",
       "hideDelete": "Hide/Delete",
       "restore": "Restore"
+    },
+    "status": {
+      "lost": "Lost",
+      "found": "Found",
+      "resolved": "Resolved",
+      "hidden": "Hidden",
+      "reported": "Reported"
     }
   },
   "community": {
@@ -181,6 +195,16 @@
       "reviewReporters": "Review Reporters",
       "deleteWarn": "Delete Target & Warn",
       "dismiss": "Dismiss Report"
+    },
+    "status": {
+      "pending": "Pending",
+      "reviewing": "Reviewing",
+      "resolved": "Resolved",
+      "rejected": "Rejected"
+    },
+    "badges": {
+      "priority": "Priority",
+      "autoHidden": "Auto-Hidden"
     }
   },
   "notifications": {

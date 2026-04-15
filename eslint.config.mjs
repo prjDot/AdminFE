@@ -54,6 +54,15 @@ export default tseslint.config(
     rules: {
       "no-alert": "error",
       "no-console": "error",
+      "import/no-cycle": "error",
+      "no-restricted-properties": [
+        "error",
+        {
+          object: "Math",
+          property: "random",
+          message: "재현 가능한 QA를 위해 랜덤 데이터 생성을 금지합니다.",
+        },
+      ],
       "no-restricted-imports": [
         "error",
         {
@@ -82,6 +91,14 @@ export default tseslint.config(
   {
     files: ["src/pages/**/*.{ts,tsx}"],
     rules: {
+      "max-lines": [
+        "error",
+        {
+          max: 140,
+          skipBlankLines: true,
+          skipComments: true,
+        },
+      ],
       "no-restricted-imports": [
         "error",
         {
