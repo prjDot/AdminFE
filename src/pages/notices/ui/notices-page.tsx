@@ -66,7 +66,7 @@ export function NoticesPage() {
           
           const label = String(status);
 
-          return <Badge variant={variant as any}>{label}</Badge>;
+          return <Badge variant={variant}>{label}</Badge>;
         },
       },
       {

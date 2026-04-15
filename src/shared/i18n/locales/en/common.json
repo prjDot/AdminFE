@@ -15,6 +15,11 @@
       "manageCategories": "Manage Categories",
       "sendNotification": "Send Notification"
     },
+    "feedback": {
+      "saved": "Settings have been saved.",
+      "sent": "Notification request has been queued.",
+      "failed": "The request failed. Please try again later."
+    },
     "status": {
       "active": "Active",
       "inactive": "Inactive",
@@ -66,8 +71,18 @@
   },
   "dashboard": {
     "title": "Dashboard Overview",
-    "description": "Monitor key metrics for the PawGen service.",
+    "description": "Monitor real-time service operations.",
+    "timeframe": {
+      "label": "Timeframe",
+      "today": "Today",
+      "weekly": "This Week",
+      "monthly": "This Month"
+    },
     "summary": {
+      "reportedNotices": "Reported Notices",
+      "resolvedNotices": "Resolved Notices",
+      "userReports": "User Reports",
+      "newSignups": "New Signups",
       "totalUsers": "Total Users",
       "activeNotices": "Active Notices",
       "unresolvedReports": "Unresolved Reports",
@@ -76,9 +91,16 @@
       "fromLastWeek": "from last week"
     },
     "charts": {
+      "timeline": "Chart: Reported & Resolved (Timeline)",
       "newNotices": "New Notices (Last 7 Days)",
       "reports": "Reports Received (Last 7 Days)",
       "day": "Day {{day}}"
+    },
+    "priority": {
+      "title": "Recent Priority Items",
+      "badge": "Priority",
+      "target": "Target: Notice #{{id}}",
+      "reason": "Reported for spam. Needs immediate attention."
     }
   },
   "users": {
@@ -216,6 +238,7 @@
     "serviceName": "Service Name",
     "supportEmail": "Support Email",
     "fcmServerKey": "FCM Server Key",
+    "fcmServerKeyPlaceholder": "Server-side secret key is not exposed on the client",
     "shelterApiUrl": "Shelter API URL",
     "animalTypes": "Animal Types / Breeds Dictionary",
     "regionCodes": "Region Codes Mapping",

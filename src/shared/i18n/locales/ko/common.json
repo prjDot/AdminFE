@@ -15,6 +15,11 @@
       "manageCategories": "카테고리 관리",
       "sendNotification": "알림 발송"
     },
+    "feedback": {
+      "saved": "설정이 저장되었습니다.",
+      "sent": "알림 발송 요청이 접수되었습니다.",
+      "failed": "요청 처리에 실패했습니다. 잠시 후 다시 시도해주세요."
+    },
     "status": {
       "active": "활성",
       "inactive": "비활성",
@@ -66,8 +71,18 @@
   },
   "dashboard": {
     "title": "대시보드 개요",
-    "description": "PawGen 서비스 핵심 지표를 모니터링합니다.",
+    "description": "실시간 운영 지표를 모니터링합니다.",
+    "timeframe": {
+      "label": "조회 기간",
+      "today": "오늘",
+      "weekly": "이번 주",
+      "monthly": "이번 달"
+    },
     "summary": {
+      "reportedNotices": "신고 공고",
+      "resolvedNotices": "처리 완료 공고",
+      "userReports": "사용자 신고",
+      "newSignups": "신규 가입자",
       "totalUsers": "전체 사용자",
       "activeNotices": "활성 공고",
       "unresolvedReports": "미해결 신고",
@@ -76,9 +91,16 @@
       "fromLastWeek": "지난주 대비"
     },
     "charts": {
+      "timeline": "신고/처리 타임라인",
       "newNotices": "최근 7일 신규 공고",
       "reports": "최근 7일 신고 접수",
       "day": "{{day}}일"
+    },
+    "priority": {
+      "title": "우선 처리 항목",
+      "badge": "우선",
+      "target": "대상: 공고 #{{id}}",
+      "reason": "스팸 신고 누적으로 즉시 검토가 필요합니다."
     }
   },
   "users": {
@@ -216,6 +238,7 @@
     "serviceName": "서비스명",
     "supportEmail": "지원 이메일",
     "fcmServerKey": "FCM 서버 키",
+    "fcmServerKeyPlaceholder": "서버에 저장된 비밀 키는 클라이언트에 표시되지 않습니다",
     "shelterApiUrl": "보호소 API URL",
     "animalTypes": "동물/품종 사전",
     "regionCodes": "지역 코드 매핑",

@@ -1,4 +1,6 @@
 {
+  "buildCommand": "bun run check",
+  "outputDirectory": "dist",
   "rewrites": [
     {
       "source": "/((?!api|assets|.*\\..*).*)",

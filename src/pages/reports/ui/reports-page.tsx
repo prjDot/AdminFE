@@ -72,7 +72,7 @@ export function ReportsPage() {
             status === REPORT_STATUS.REVIEWING ? "warning" :
             status === REPORT_STATUS.RESOLVED ? "default" : "secondary";
           
-          return <Badge variant={variant as any}>{String(status)}</Badge>;
+          return <Badge variant={variant}>{String(status)}</Badge>;
         },
       },
       {
