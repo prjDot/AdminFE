@@ -6,13 +6,13 @@ import { useTranslation } from "react-i18next";
 
 export function LoginPage() {
   const { t } = useTranslation();
-  const setAuth = useAuthStore((state) => state.setAuth);
+  const verifyEmailPass = useAuthStore((state) => state.verifyEmailPass);
   const navigate = useNavigate();
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    setAuth({ id: "admin-1", name: "Super Admin", role: "SUPER_ADMIN" });
-    navigate("/dashboard");
+    verifyEmailPass("admin@pawgen.com"); // Mocking successful validation
+    navigate("/login/mfa");
   };
 
   return (

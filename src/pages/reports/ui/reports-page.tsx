@@ -14,19 +14,21 @@ import {
   DropdownMenuTrigger,
 } from "@/shared/ui/dropdown-menu";
 
+import { REPORT_STATUS, type ReportStatus } from "@/shared/config/constants";
+
 interface Report {
   id: string;
   targetType: "Notice" | "Post" | "Comment";
   reason: string;
   reporterCount: number;
-  status: "Pending" | "Reviewed" | "Action Taken";
+  status: ReportStatus;
   lastReportedAt: string;
 }
 
 const mockReports: Report[] = [
-  { id: "R001", targetType: "Notice", reason: "Spam or misleading", reporterCount: 3, status: "Pending", lastReportedAt: "2026-04-15" },
-  { id: "R002", targetType: "Comment", reason: "Harassment", reporterCount: 1, status: "Pending", lastReportedAt: "2026-04-14" },
-  { id: "R003", targetType: "Post", reason: "Inappropriate content", reporterCount: 5, status: "Action Taken", lastReportedAt: "2026-04-12" },
+  { id: "R001", targetType: "Notice", reason: "Spam or misleading", reporterCount: 3, status: REPORT_STATUS.PENDING, lastReportedAt: "2026-04-15" },
+  { id: "R002", targetType: "Comment", reason: "Harassment", reporterCount: 12, status: REPORT_STATUS.REVIEWING, lastReportedAt: "2026-04-14" },
+  { id: "R003", targetType: "Post", reason: "Inappropriate content", reporterCount: 6, status: REPORT_STATUS.RESOLVED, lastReportedAt: "2026-04-12" },
 ];
 
 export function ReportsPage() {
@@ -48,26 +50,29 @@ export function ReportsPage() {
         header: t("reports.table.reports"),
         cell: ({ row }) => {
           const count = row.getValue("reporterCount") as number;
-          return <Badge variant={count > 3 ? "destructive" : "secondary"}>{count}</Badge>;
+          
+          return (
+            <div className="flex items-center gap-2">
+              <Badge variant={count >= 10 ? "destructive" : "secondary"} className={count >= 5 && count < 10 ? "bg-amber-500 text-white hover:bg-amber-600" : ""}>
+                {count}
+              </Badge>
+              {count >= 10 && <Badge variant="destructive" className="px-1 text-[10px]">Priority</Badge>}
+              {count >= 5 && count < 10 && <Badge variant="outline" className="px-1 text-[10px]">Auto-Hidden</Badge>}
+            </div>
+          );
         },
       },
       {
         accessorKey: "status",
         header: t("reports.table.status"),
         cell: ({ row }) => {
-          const status = row.getValue("status") as Report["status"];
+          const status = row.getValue("status") as ReportStatus;
           const variant = 
-            status === "Pending" ? "destructive" : 
-            status === "Action Taken" ? "default" : "secondary";
-
-          const label =
-            status === "Pending"
-              ? t("common.status.pending")
-              : status === "Action Taken"
-                ? t("common.status.actionTaken")
-                : t("common.status.reviewed");
-
-          return <Badge variant={variant}>{label}</Badge>;
+            status === REPORT_STATUS.PENDING ? "destructive" : 
+            status === REPORT_STATUS.REVIEWING ? "warning" :
+            status === REPORT_STATUS.RESOLVED ? "default" : "secondary";
+          
+          return <Badge variant={variant as any}>{String(status)}</Badge>;
         },
       },
       {
@@ -92,7 +97,7 @@ export function ReportsPage() {
                 <DropdownMenuItem>{t("reports.menu.viewTarget")}</DropdownMenuItem>
                 <DropdownMenuItem>{t("reports.menu.reviewReporters")}</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                {report.status === "Pending" && (
+                {report.status === REPORT_STATUS.PENDING && (
                   <>
                     <DropdownMenuItem className="text-destructive">{t("reports.menu.deleteWarn")}</DropdownMenuItem>
                     <DropdownMenuItem>{t("reports.menu.dismiss")}</DropdownMenuItem>

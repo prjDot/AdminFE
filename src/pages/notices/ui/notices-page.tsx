@@ -14,20 +14,23 @@ import {
   DropdownMenuTrigger,
 } from "@/shared/ui/dropdown-menu";
 
+import { NOTICE_STATUS, type NoticeStatus } from "@/shared/config/constants";
+
 interface Notice {
   id: string;
   title: string;
   animalType: string;
-  status: "Lost" | "Found" | "Hidden";
+  status: NoticeStatus;
   reporter: string;
   date: string;
 }
 
 const mockNotices: Notice[] = [
-  { id: "N001", title: "Looking for my golden retriever", animalType: "Dog", status: "Lost", reporter: "Alice Smith", date: "2026-04-10" },
-  { id: "N002", title: "Found a black cat near the park", animalType: "Cat", status: "Found", reporter: "Bob Jones", date: "2026-04-12" },
-  { id: "N003", title: "Missing parrot", animalType: "Bird", status: "Lost", reporter: "Charlie Brown", date: "2026-04-14" },
-  { id: "N004", title: "Spam notice", animalType: "Other", status: "Hidden", reporter: "Spammer123", date: "2026-04-14" },
+  { id: "N001", title: "Looking for my golden retriever", animalType: "Dog", status: NOTICE_STATUS.LOST, reporter: "Alice Smith", date: "2026-04-10" },
+  { id: "N002", title: "Found a black cat near the park", animalType: "Cat", status: NOTICE_STATUS.FOUND, reporter: "Bob Jones", date: "2026-04-12" },
+  { id: "N003", title: "Dog returned to owner!", animalType: "Dog", status: NOTICE_STATUS.RESOLVED, reporter: "Charlie Brown", date: "2026-04-14" },
+  { id: "N004", title: "Spam notice", animalType: "Other", status: NOTICE_STATUS.HIDDEN, reporter: "Spammer123", date: "2026-04-14" },
+  { id: "N005", title: "Inappropriate picture", animalType: "Cat", status: NOTICE_STATUS.REPORTED, reporter: "BadUser", date: "2026-04-15" },
 ];
 
 export function NoticesPage() {
@@ -55,18 +58,15 @@ export function NoticesPage() {
         accessorKey: "status",
         header: t("notices.table.status"),
         cell: ({ row }) => {
-          const status = row.getValue("status") as Notice["status"];
+          const status = row.getValue("status") as NoticeStatus;
           const variant = 
-            status === "Found" ? "default" : 
-            status === "Lost" ? "destructive" : "secondary";
-          const label =
-            status === "Found"
-              ? t("common.status.found")
-              : status === "Lost"
-                ? t("common.status.lost")
-                : t("common.status.hidden");
+            status === NOTICE_STATUS.FOUND || status === NOTICE_STATUS.RESOLVED ? "default" : 
+            status === NOTICE_STATUS.LOST ? "destructive" : 
+            status === NOTICE_STATUS.REPORTED ? "warning" : "secondary";
+          
+          const label = String(status);
 
-          return <Badge variant={variant}>{label}</Badge>;
+          return <Badge variant={variant as any}>{label}</Badge>;
         },
       },
       {
@@ -95,7 +95,7 @@ export function NoticesPage() {
                 <DropdownMenuItem>{t("notices.menu.viewDetails")}</DropdownMenuItem>
                 <DropdownMenuItem>{t("notices.menu.editNotice")}</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                {notice.status !== "Hidden" ? (
+                {notice.status !== NOTICE_STATUS.HIDDEN ? (
                   <DropdownMenuItem className="text-destructive">{t("notices.menu.hideDelete")}</DropdownMenuItem>
                 ) : (
                   <DropdownMenuItem>{t("notices.menu.restore")}</DropdownMenuItem>

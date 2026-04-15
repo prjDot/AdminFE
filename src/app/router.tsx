@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import { AdminLayout } from "@/widgets/layout/ui/admin-layout";
 import { LoginPage } from "@/pages/login/ui/login-page";
+import { OTPPage } from "@/pages/otp/ui/otp-page";
 import { DashboardPage } from "@/pages/dashboard/ui/dashboard-page";
 import { UsersPage } from "@/pages/users/ui/users-page";
 import { NoticesPage } from "@/pages/notices/ui/notices-page";
@@ -15,6 +16,10 @@ export const router = createBrowserRouter([
   {
     path: "/login",
     element: <LoginPage />,
+  },
+  {
+    path: "/login/mfa",
+    element: <OTPPage />,
   },
   {
     path: "/",

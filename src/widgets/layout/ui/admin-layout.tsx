@@ -4,9 +4,9 @@ import { AdminSidebar } from "./admin-sidebar";
 import { AdminHeader } from "./admin-header";
 
 export function AdminLayout() {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const step = useAuthStore((state) => state.step);
 
-  if (!isAuthenticated) {
+  if (step !== "AUTHENTICATED") {
     return <Navigate to="/login" replace />;
   }
 

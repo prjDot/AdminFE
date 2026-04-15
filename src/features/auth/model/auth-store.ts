@@ -1,23 +1,29 @@
 import { create } from "zustand";
+import { type Role } from "@/shared/config/constants";
 
-export type AdminRole = "SUPER_ADMIN" | "REPORT_MANAGER" | "COMMUNITY_MANAGER";
-
-interface AdminUser {
+export interface AdminUser {
   id: string;
+  email: string;
   name: string;
-  role: AdminRole;
+  role: Role;
 }
 
 interface AuthState {
-  isAuthenticated: boolean;
+  step: "NONE" | "OTP_REQUIRED" | "AUTHENTICATED";
+  tempEmail: string | null;
   admin: AdminUser | null;
-  setAuth: (admin: AdminUser) => void;
+  
+  verifyEmailPass: (email: string) => void;
+  verifyOTP: (admin: AdminUser) => void;
   logout: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  isAuthenticated: false,
+  step: "NONE",
+  tempEmail: null,
   admin: null,
-  setAuth: (admin) => set({ isAuthenticated: true, admin }),
-  logout: () => set({ isAuthenticated: false, admin: null }),
+  
+  verifyEmailPass: (email) => set({ step: "OTP_REQUIRED", tempEmail: email }),
+  verifyOTP: (admin) => set({ step: "AUTHENTICATED", admin, tempEmail: null }),
+  logout: () => set({ step: "NONE", admin: null, tempEmail: null }),
 }));

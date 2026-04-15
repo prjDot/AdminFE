@@ -16,15 +16,18 @@ import {
 } from "@/shared/ui/table";
 import { Button } from "@/shared/ui/button";
 import { useTranslation } from "react-i18next";
+import { Download } from "lucide-react";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
+  filename?: string;
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
+  filename = "export.csv",
 }: DataTableProps<TData, TValue>) {
   const { t } = useTranslation();
 
@@ -35,8 +38,36 @@ export function DataTable<TData, TValue>({
     getPaginationRowModel: getPaginationRowModel(),
   });
 
+  const handleExportCSV = () => {
+    const exportableCols = table.getAllLeafColumns().filter(c => c.id !== "actions");
+    const headers = exportableCols.map(c => c.columnDef.header as string || c.id).join(',');
+    const rows = table.getCoreRowModel().rows.map(row => {
+      return exportableCols.map(c => {
+         const val = row.getValue(c.id);
+         const str = String(val ?? "").replace(/"/g, '""');
+         return `"${str}"`;
+      }).join(',');
+    }).join('\n');
+
+    const csvContent = `${headers}\n${rows}`;
+    const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
-    <div>
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <Button variant="outline" size="sm" onClick={handleExportCSV}>
+          <Download className="mr-2 h-4 w-4" />
+          Export CSV
+        </Button>
+      </div>
       <div className="rounded-md border bg-card">
         <Table>
           <TableHeader>
