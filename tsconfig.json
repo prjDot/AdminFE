@@ -15,8 +15,9 @@
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "verbatimModuleSyntax": true,
-    "types": ["vite/client"],
-    "ignoreDeprecations": "6.0",
+    "types": [
+      "vite/client"
+    ],
     "noEmit": true,
     // Best practices
     "strict": true,
@@ -35,6 +36,15 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "bun-env.d.ts"],
-  "exclude": ["dist", "node_modules", "src/index.ts", "src/frontend.tsx"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "bun-env.d.ts"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "src/index.ts",
+    "src/frontend.tsx"
+  ]
 }

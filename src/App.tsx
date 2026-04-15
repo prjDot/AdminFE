@@ -2,8 +2,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { APITester } from "./APITester";
 import "./index.css";
 
-import logo from "./logo.svg";
-import reactLogo from "./react.svg";
+import logo from "../public/icon/pawIcon.svg";
+import reactLogo from "../public/icon/pawIcon.svg";
 
 export function App() {
   return (
