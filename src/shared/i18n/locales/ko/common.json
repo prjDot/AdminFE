@@ -236,19 +236,33 @@
     "delivered": "{{count}}건 전달"
   },
   "services": {
-    "title": "외부 서비스 & API",
-    "description": "국가동물보호 API 연동과 이미지 분석 큐를 모니터링합니다.",
-    "apiStatus": "보호소 API 상태",
-    "photoQueue": "이미지 분석 큐",
-    "recentFailures": "최근 API 실패",
-    "endpoint": "엔드포인트",
-    "lastSync": "최근 동기화",
-    "syncRate": "동기화 주기",
-    "tenMinsAgo": "10분 전",
-    "everyHour": "1시간마다",
-    "queuePending": "{{count}}건 대기",
-    "failedMinsAgo": "{{count}}분 전 실패",
-    "noErrors": "최근 오류가 없습니다. 네트워크 상태가 정상입니다."
+    "title": "서버 상태 모니터링",
+    "description": "내부 서비스(API, DB, 인프라)의 가용성, 상태 추세, 최근 장애 이력을 모니터링합니다.",
+    "manualControl": "상태 수동 변경",
+    "manualControlTitle": "서비스 상태 수동 변경",
+    "overrideStatus": "변경 사유 및 내용",
+    "overrideReasonPlaceholder": "예: 데이터베이스 지연 확인 중...",
+    "global": {
+      "allSystemsOperational": "모든 시스템이 정상 작동 중입니다",
+      "lastUpdated": "최근 업데이트: {{time}}"
+    },
+    "components": {
+      "coreApi": "Core API 서버",
+      "appDatabase": "앱 메인 데이터베이스",
+      "mediaAnalysis": "이미지 분석 파이프라인"
+    },
+    "status": {
+      "operational": "정상 작동",
+      "degraded": "성능 저하",
+      "partialOutage": "부분 장애"
+    },
+    "uptime": {
+      "title": "시스템 가동률 (90일)",
+      "overall": "누적 가동률"
+    },
+    "incidents": {
+      "title": "최근 장애 이력"
+    }
   },
   "audit": {
     "title": "감사 로그",

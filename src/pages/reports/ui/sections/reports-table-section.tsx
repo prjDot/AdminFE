@@ -4,6 +4,7 @@ import { MoreHorizontal } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { DataTable } from "@/widgets/data-table/ui/data-table";
 import { Badge } from "@/shared/ui/badge";
+import { toast } from "sonner";
 import { Button } from "@/shared/ui/button";
 import {
   DropdownMenu,
@@ -109,13 +110,13 @@ export function ReportsTableSection() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>{t("reports.menu.actions")}</DropdownMenuLabel>
-                <DropdownMenuItem>{t("reports.menu.viewTarget")}</DropdownMenuItem>
-                <DropdownMenuItem>{t("reports.menu.reviewReporters")}</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => toast.info("Opening reported target")}>{t("reports.menu.viewTarget")}</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => toast.info("Opening reporter list")}>{t("reports.menu.reviewReporters")}</DropdownMenuItem>
                 <DropdownMenuSeparator />
                 {report.status === REPORT_STATUS.PENDING && (
                   <>
-                    <DropdownMenuItem className="text-destructive">{t("reports.menu.deleteWarn")}</DropdownMenuItem>
-                    <DropdownMenuItem>{t("reports.menu.dismiss")}</DropdownMenuItem>
+                    <DropdownMenuItem className="text-destructive focus:bg-destructive focus:text-destructive-foreground" onClick={() => toast.error("Target deleted and user warned")}>{t("reports.menu.deleteWarn")}</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => toast.success("Report dismissed")}>{t("reports.menu.dismiss")}</DropdownMenuItem>
                   </>
                 )}
               </DropdownMenuContent>

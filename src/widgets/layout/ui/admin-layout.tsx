@@ -2,6 +2,7 @@ import { Outlet, Navigate, useNavigation } from "react-router-dom";
 import { useAuthStore } from "@/features/auth/model/auth-store";
 import { AdminSidebar } from "./admin-sidebar";
 import { AdminHeader } from "./admin-header";
+import { Toaster } from "@/shared/ui/sonner";
 
 export function AdminLayout() {
   const step = useAuthStore((state) => state.step);
@@ -28,6 +29,7 @@ export function AdminLayout() {
           <Outlet />
         </main>
       </div>
+      <Toaster position="top-center" richColors />
     </div>
   );
 }

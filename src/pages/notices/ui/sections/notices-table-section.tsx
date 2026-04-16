@@ -4,6 +4,7 @@ import { MoreHorizontal, Image as ImageIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { DataTable } from "@/widgets/data-table/ui/data-table";
 import { Badge } from "@/shared/ui/badge";
+import { toast } from "sonner";
 import { Button } from "@/shared/ui/button";
 import {
   DropdownMenu,
@@ -96,13 +97,13 @@ export function NoticesTableSection() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>{t("notices.menu.actions")}</DropdownMenuLabel>
-                <DropdownMenuItem>{t("notices.menu.viewDetails")}</DropdownMenuItem>
-                <DropdownMenuItem>{t("notices.menu.editNotice")}</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => toast.info("Viewing notice details")}>{t("notices.menu.viewDetails")}</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => toast.info("Opening edit form")}>{t("notices.menu.editNotice")}</DropdownMenuItem>
                 <DropdownMenuSeparator />
                 {notice.status !== NOTICE_STATUS.HIDDEN ? (
-                  <DropdownMenuItem className="text-destructive">{t("notices.menu.hideDelete")}</DropdownMenuItem>
+                  <DropdownMenuItem className="text-destructive focus:bg-destructive focus:text-destructive-foreground" onClick={() => toast.error("Notice hidden")}>{t("notices.menu.hideDelete")}</DropdownMenuItem>
                 ) : (
-                  <DropdownMenuItem>{t("notices.menu.restore")}</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => toast.success("Notice restored")}>{t("notices.menu.restore")}</DropdownMenuItem>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>

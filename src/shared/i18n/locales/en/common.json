@@ -236,19 +236,33 @@
     "delivered": "{{count}} Delivered"
   },
   "services": {
-    "title": "External Services & API",
-    "description": "Monitor national shelter API integration and photo analysis queue.",
-    "apiStatus": "Shelter API Status",
-    "photoQueue": "Photo Analysis Queue",
-    "recentFailures": "Recent API Failures",
-    "endpoint": "Endpoint",
-    "lastSync": "Last Sync",
-    "syncRate": "Sync Rate",
-    "tenMinsAgo": "10 mins ago",
-    "everyHour": "Every 1 hour",
-    "queuePending": "{{count}} Pending",
-    "failedMinsAgo": "Failed {{count}} mins ago",
-    "noErrors": "No recent errors logged. Network is healthy."
+    "title": "Server Status Monitoring",
+    "description": "Monitor the availability, uptime trends, and recent incidents of internal services (API, DB, Infrastructure).",
+    "manualControl": "Manual Override",
+    "manualControlTitle": "Override Service Status",
+    "overrideStatus": "Status Reason & Details",
+    "overrideReasonPlaceholder": "E.g., Investigating database latency...",
+    "global": {
+      "allSystemsOperational": "All Systems Operational",
+      "lastUpdated": "Last updated: {{time}}"
+    },
+    "components": {
+      "coreApi": "Core API Server",
+      "appDatabase": "App Database",
+      "mediaAnalysis": "Media Analysis Pipeline"
+    },
+    "status": {
+      "operational": "Operational",
+      "degraded": "Degraded",
+      "partialOutage": "Partial Outage"
+    },
+    "uptime": {
+      "title": "System Uptime (90 Days)",
+      "overall": "Overall Uptime"
+    },
+    "incidents": {
+      "title": "Recent Incidents"
+    }
   },
   "audit": {
     "title": "Audit Logs",

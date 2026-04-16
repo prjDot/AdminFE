@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/shared/ui/button";
 import { FormStatus } from "@/shared/ui/form-status";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { SettingsPreferencesSection } from "@/pages/settings/ui/sections/settings-preferences-section";
 import { SettingsGeneralSection } from "@/pages/settings/ui/sections/settings-general-section";
 import { SettingsIntegrationSection } from "@/pages/settings/ui/sections/settings-integration-section";
@@ -31,24 +32,46 @@ export function SettingsPage() {
   });
 
   return (
-    <div className="mx-auto max-w-4xl space-y-8 p-8">
+    <div className="mx-auto max-w-4xl space-y-8 p-4 sm:p-8">
       <div className="flex items-center gap-3">
-        <Settings2 className="h-8 w-8 text-primary" />
+        <div className="p-2 bg-primary/10 rounded-xl">
+          <Settings2 className="h-6 w-6 text-primary" />
+        </div>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t("settings.title")}</h1>
-          <p className="mt-2 text-muted-foreground">{t("settings.description")}</p>
+          <h1 className="text-2xl font-bold tracking-tight">{t("settings.title")}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t("settings.description")}</p>
         </div>
       </div>
 
       {feedback && <FormStatus tone={feedback.tone} message={feedback.message} />}
 
-      <form onSubmit={onSubmit} className="space-y-8">
-        <SettingsPreferencesSection />
-        <SettingsGeneralSection register={register} />
-        <SettingsIntegrationSection register={register} />
-        <SettingsBaseDataSection />
+      <form onSubmit={onSubmit} className="bg-card border rounded-xl shadow-sm p-6">
+        <Tabs defaultValue="general" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 mb-8">
+            <TabsTrigger value="general">{t("settings.generalTitle")}</TabsTrigger>
+            <TabsTrigger value="preferences">UI Preferences</TabsTrigger>
+            <TabsTrigger value="integration">{t("settings.integrationTitle")}</TabsTrigger>
+            <TabsTrigger value="basedata">{t("settings.baseDataTitle")}</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="general" className="space-y-6 focus-visible:outline-none focus-visible:ring-0">
+            <SettingsGeneralSection register={register} />
+          </TabsContent>
+          
+          <TabsContent value="preferences" className="space-y-6 focus-visible:outline-none focus-visible:ring-0">
+            <SettingsPreferencesSection />
+          </TabsContent>
+          
+          <TabsContent value="integration" className="space-y-6 focus-visible:outline-none focus-visible:ring-0">
+            <SettingsIntegrationSection register={register} />
+          </TabsContent>
+          
+          <TabsContent value="basedata" className="space-y-6 focus-visible:outline-none focus-visible:ring-0">
+            <SettingsBaseDataSection />
+          </TabsContent>
+        </Tabs>
 
-        <div className="flex justify-end gap-4">
+        <div className="flex justify-end gap-4 mt-8 pt-6 border-t">
           <Button type="button" variant="outline">
             {t("common.actions.cancel")}
           </Button>

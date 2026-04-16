@@ -4,6 +4,7 @@ import { MoreHorizontal, MessageSquare } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { DataTable } from "@/widgets/data-table/ui/data-table";
 import { Badge } from "@/shared/ui/badge";
+import { toast } from "sonner";
 import { Button } from "@/shared/ui/button";
 import {
   DropdownMenu,
@@ -73,10 +74,10 @@ export function CommunityTableSection() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>{t("community.menu.actions")}</DropdownMenuLabel>
-              <DropdownMenuItem>{t("community.menu.viewPostReplies")}</DropdownMenuItem>
-              <DropdownMenuItem>{t("community.menu.viewPollResults")}</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => toast.info("Loading post replies")}>{t("community.menu.viewPostReplies")}</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => toast.info("Loading poll results")}>{t("community.menu.viewPollResults")}</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive">{t("community.menu.deletePost")}</DropdownMenuItem>
+              <DropdownMenuItem className="text-destructive focus:bg-destructive focus:text-destructive-foreground" onClick={() => toast.error("Post deleted")}>{t("community.menu.deletePost")}</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         ),
