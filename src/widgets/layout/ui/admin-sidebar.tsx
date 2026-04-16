@@ -43,8 +43,8 @@ export function AdminSidebar() {
   const location = useLocation();
 
   return (
-    <aside className="h-full w-64 overflow-y-auto border-r bg-card">
-      <div className="sticky top-0 z-10 flex h-14 flex-shrink-0 items-center border-b bg-card px-6 text-lg font-bold text-primary">
+    <div className="flex h-full w-full flex-col overflow-y-auto">
+      <div className="sticky top-0 z-10 flex h-14 shrink-0 items-center border-b bg-card px-6 text-lg font-bold text-primary">
         {t("common.appName")}
       </div>
       <div className="flex flex-1 flex-col gap-6 py-4">
@@ -77,6 +77,6 @@ export function AdminSidebar() {
           </div>
         ))}
       </div>
-    </aside>
+    </div>
   );
 }

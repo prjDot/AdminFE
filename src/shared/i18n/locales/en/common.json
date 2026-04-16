@@ -96,16 +96,15 @@
       "monthly": "This Month"
     },
     "summary": {
-      "reportedNotices": "Reported Notices",
-      "resolvedNotices": "Resolved Notices",
-      "userReports": "User Reports",
-      "newSignups": "New Signups",
-      "totalUsers": "Total Users",
-      "activeNotices": "Active Notices",
-      "unresolvedReports": "Unresolved Reports",
-      "resolvedCases": "Resolved Cases",
-      "fromLastMonth": "from last month",
-      "fromLastWeek": "from last week"
+      "currentActiveUsers": "Current Active Users",
+      "serverStatus": "Server Status",
+      "serverOperational": "Operational",
+      "timeframeMetrics": "Summary for {{timeframe}}",
+      "newUsers": "New Signups",
+      "announcementsPosted": "Notices Posted",
+      "communityPosts": "Community Posts",
+      "processedTasks": "Processed Tasks",
+      "userReports": "User Reports"
     },
     "charts": {
       "timeline": "Chart: Reported & Resolved (Timeline)",

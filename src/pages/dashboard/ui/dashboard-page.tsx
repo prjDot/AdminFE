@@ -44,7 +44,7 @@ export function DashboardPage() {
   );
 
   return (
-    <div className="mx-auto max-w-7xl space-y-8 p-8">
+    <div className="mx-auto w-full max-w-screen-2xl space-y-8 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
       <DashboardHeader timeframe={timeframe} onChangeTimeframe={setTimeframe} />
       <DashboardSummaryGrid timeframe={timeframe} />
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

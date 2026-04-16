@@ -96,16 +96,15 @@
       "monthly": "이번 달"
     },
     "summary": {
-      "reportedNotices": "신고 공고",
-      "resolvedNotices": "처리 완료 공고",
-      "userReports": "사용자 신고",
-      "newSignups": "신규 가입자",
-      "totalUsers": "전체 사용자",
-      "activeNotices": "활성 공고",
-      "unresolvedReports": "미해결 신고",
-      "resolvedCases": "해결된 케이스",
-      "fromLastMonth": "지난달 대비",
-      "fromLastWeek": "지난주 대비"
+      "currentActiveUsers": "현재 접속중인 사용자",
+      "serverStatus": "서버 상태",
+      "serverOperational": "정상 작동 중",
+      "timeframeMetrics": "{{timeframe}} 기준 전체 현황",
+      "newUsers": "회원가입",
+      "announcementsPosted": "신규 공고",
+      "communityPosts": "커뮤니티 글",
+      "processedTasks": "처리된 작업",
+      "userReports": "접수된 신고"
     },
     "charts": {
       "timeline": "신고/처리 타임라인",

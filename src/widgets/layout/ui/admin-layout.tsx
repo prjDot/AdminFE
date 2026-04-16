@@ -14,8 +14,10 @@ export function AdminLayout() {
 
   return (
     <div className="flex min-h-screen bg-background">
-      <AdminSidebar />
-      <div className="flex-1 flex flex-col">
+      <aside className="hidden lg:flex w-64 shrink-0 flex-col border-r bg-card">
+        <AdminSidebar />
+      </aside>
+      <div className="flex flex-1 flex-col min-w-0">
         <AdminHeader />
         {isNavigating && (
           <div className="h-0.5 w-full overflow-hidden bg-border">
