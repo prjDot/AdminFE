@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { type ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal, Search, Filter } from "lucide-react";
+import { MoreHorizontal, Search, Filter, ShieldAlert, User as UserIcon, Calendar, Mail } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { DataTable } from "@/widgets/data-table/ui/data-table";
 import { Badge } from "@/shared/ui/badge";
@@ -21,6 +21,23 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/shared/ui/dropdown-menu";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/shared/ui/sheet";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/shared/ui/alert-dialog";
 import { toast } from "sonner";
 
 interface User {
@@ -43,6 +60,12 @@ export function UsersTableSection() {
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+
+  // Modal States
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isSuspendOpen, setIsSuspendOpen] = useState(false);
+  const [isUnsuspendOpen, setIsUnsuspendOpen] = useState(false);
 
   const filteredUsers = useMemo(() => {
     return mockUsers.filter(user => {
@@ -118,18 +141,27 @@ export function UsersTableSection() {
                   {t("users.menu.copyUserId")}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => toast.info(`Viewing profile for ${user.name}`)}>
+                <DropdownMenuItem onClick={() => {
+                  setSelectedUser(user);
+                  setIsProfileOpen(true);
+                }}>
                   {t("users.menu.viewProfile")}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => toast.info(`Change role action for ${user.name}`)}>
+                <DropdownMenuItem onClick={() => toast.info(`Change role flow initiated for ${user.name}`)}>
                   {t("users.menu.changeRole")}
                 </DropdownMenuItem>
                 {user.status === "Suspended" ? (
-                  <DropdownMenuItem onClick={() => toast.success(`${user.name} unsuspended`)}>
+                  <DropdownMenuItem onClick={() => {
+                    setSelectedUser(user);
+                    setIsUnsuspendOpen(true);
+                  }}>
                     {t("users.menu.unsuspend")}
                   </DropdownMenuItem>
                 ) : (
-                  <DropdownMenuItem className="text-destructive focus:bg-destructive focus:text-destructive-foreground" onClick={() => toast.error(`${user.name} suspended`)}>
+                  <DropdownMenuItem className="text-destructive focus:bg-destructive focus:text-destructive-foreground" onClick={() => {
+                    setSelectedUser(user);
+                    setIsSuspendOpen(true);
+                  }}>
                     {t("users.menu.suspend")}
                   </DropdownMenuItem>
                 )}
@@ -170,9 +202,101 @@ export function UsersTableSection() {
           </Select>
         </div>
       </div>
+      
       <div className="bg-card rounded-xl shadow-sm border overflow-hidden">
         <DataTable columns={columns} data={filteredUsers} />
       </div>
+
+      {/* Profile Detail Sheet */}
+      <Sheet open={isProfileOpen} onOpenChange={setIsProfileOpen}>
+        <SheetContent className="w-full sm:max-w-md overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>User Profile</SheetTitle>
+            <SheetDescription>Detailed information and activity log.</SheetDescription>
+          </SheetHeader>
+          {selectedUser && (
+            <div className="py-6 space-y-6">
+              <div className="flex items-center gap-4">
+                <div className="h-16 w-16 bg-primary/10 rounded-full flex items-center justify-center">
+                  <UserIcon className="h-8 w-8 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold">{selectedUser.name}</h3>
+                  <Badge variant={selectedUser.status === "Active" ? "default" : "destructive"} className="mt-1">
+                    {selectedUser.status}
+                  </Badge>
+                </div>
+              </div>
+              <div className="space-y-3 p-4 bg-muted/30 rounded-lg border">
+                <div className="flex items-center gap-3 text-sm">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <span>{selectedUser.email}</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm">
+                  <ShieldAlert className="h-4 w-4 text-muted-foreground" />
+                  <span>{selectedUser.role}</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span>Joined {selectedUser.createdAt}</span>
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                <h4 className="font-semibold text-sm">Recent Activity</h4>
+                <div className="border border-l-4 border-l-primary rounded p-3 text-sm bg-card shadow-sm">
+                  <p className="font-medium">Uploaded missing dog notice</p>
+                  <p className="text-muted-foreground text-xs mt-1">2 days ago</p>
+                </div>
+                <div className="border border-l-4 border-l-muted-foreground rounded p-3 text-sm bg-card shadow-sm">
+                  <p className="font-medium">Logged in via Google</p>
+                  <p className="text-muted-foreground text-xs mt-1">4 days ago</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* Suspend Confirmation Dialog */}
+      <AlertDialog open={isSuspendOpen} onOpenChange={setIsSuspendOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Suspend User</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to suspend <strong>{selectedUser?.name}</strong>? They will be immediately logged out and unable to access the PawGen platform until unsuspended.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              toast.success(`${selectedUser?.name} has been suspended.`);
+            }} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Confirm Suspension
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Unsuspend Confirmation Dialog */}
+      <AlertDialog open={isUnsuspendOpen} onOpenChange={setIsUnsuspendOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unsuspend User</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to restore access for <strong>{selectedUser?.name}</strong>? The user will be notified that they can log in again.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              toast.success(`${selectedUser?.name} access restored.`);
+            }}>
+              Confirm Unsuspend
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

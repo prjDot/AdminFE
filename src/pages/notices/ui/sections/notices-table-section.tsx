@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { type ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal, Image as ImageIcon } from "lucide-react";
+import { MoreHorizontal, Image as ImageIcon, MapPin, Calendar, User as UserIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { DataTable } from "@/widgets/data-table/ui/data-table";
 import { Badge } from "@/shared/ui/badge";
@@ -14,6 +14,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/shared/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/shared/ui/dialog";
 import { NOTICE_STATUS, type NoticeStatus } from "@/shared/config/constants";
 
 interface Notice {
@@ -43,6 +50,10 @@ const mockNotices: Notice[] = [
 
 export function NoticesTableSection() {
   const { t } = useTranslation();
+  
+  // Dialog State
+  const [selectedNotice, setSelectedNotice] = useState<Notice | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   const columns = useMemo<ColumnDef<Notice>[]>(
     () => [
@@ -97,7 +108,12 @@ export function NoticesTableSection() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>{t("notices.menu.actions")}</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => toast.info("Viewing notice details")}>{t("notices.menu.viewDetails")}</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  setSelectedNotice(notice);
+                  setIsDetailOpen(true);
+                }}>
+                  {t("notices.menu.viewDetails")}
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => toast.info("Opening edit form")}>{t("notices.menu.editNotice")}</DropdownMenuItem>
                 <DropdownMenuSeparator />
                 {notice.status !== NOTICE_STATUS.HIDDEN ? (
@@ -117,6 +133,62 @@ export function NoticesTableSection() {
   return (
     <div className="bg-card rounded-xl">
       <DataTable columns={columns} data={mockNotices} />
+
+      {/* Notice Details Dialog */}
+      <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Notice Details</DialogTitle>
+            <DialogDescription>
+              Detailed view of the reported notice and metadata.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedNotice && (
+            <div className="space-y-6 py-4">
+              <div className="h-48 w-full bg-muted/40 rounded-lg flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/20">
+                <ImageIcon className="h-12 w-12 text-muted-foreground/40 mb-2" />
+                <span className="text-sm text-muted-foreground">Original Image Placeholder</span>
+              </div>
+              
+              <div>
+                <h3 className="text-xl font-bold flex items-center gap-2">
+                  {selectedNotice.title}
+                </h3>
+                <div className="flex gap-2 mt-2">
+                  <Badge variant="outline">{selectedNotice.animalType}</Badge>
+                  <Badge>{selectedNotice.status}</Badge>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 bg-muted/20 p-4 rounded-xl border">
+                <div className="space-y-1">
+                  <span className="text-xs text-muted-foreground flex items-center gap-1"><UserIcon className="h-3 w-3"/> Reporter</span>
+                  <p className="text-sm font-medium">{selectedNotice.reporter}</p>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-xs text-muted-foreground flex items-center gap-1"><Calendar className="h-3 w-3"/> Date</span>
+                  <p className="text-sm font-medium">{selectedNotice.date}</p>
+                </div>
+                <div className="space-y-1 col-span-2 mt-2 border-t pt-3">
+                  <span className="text-xs text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3"/> Location</span>
+                  <p className="text-sm font-medium">Near Central Park, 5th Avenue</p>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <Button variant="outline" onClick={() => setIsDetailOpen(false)}>Close</Button>
+                {selectedNotice.status !== NOTICE_STATUS.HIDDEN && (
+                  <Button variant="destructive" onClick={() => {
+                    toast.error("Notice hidden from public API");
+                    setIsDetailOpen(false);
+                  }}>Hide Notice</Button>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

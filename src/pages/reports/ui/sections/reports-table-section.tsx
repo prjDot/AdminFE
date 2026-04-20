@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { type ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, Users, AlertTriangle, ShieldAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { DataTable } from "@/widgets/data-table/ui/data-table";
 import { Badge } from "@/shared/ui/badge";
@@ -14,6 +14,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/shared/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/shared/ui/dialog";
 import { REPORT_STATUS, type ReportStatus } from "@/shared/config/constants";
 
 interface Report {
@@ -40,6 +47,10 @@ const mockReports: Report[] = [
 
 export function ReportsTableSection() {
   const { t } = useTranslation();
+  
+  // Dialog State
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  const [isReportersOpen, setIsReportersOpen] = useState(false);
 
   const columns = useMemo<ColumnDef<Report>[]>(
     () => [
@@ -111,7 +122,12 @@ export function ReportsTableSection() {
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>{t("reports.menu.actions")}</DropdownMenuLabel>
                 <DropdownMenuItem onClick={() => toast.info("Opening reported target")}>{t("reports.menu.viewTarget")}</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => toast.info("Opening reporter list")}>{t("reports.menu.reviewReporters")}</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  setSelectedReport(report);
+                  setIsReportersOpen(true);
+                }}>
+                  {t("reports.menu.reviewReporters")}
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 {report.status === REPORT_STATUS.PENDING && (
                   <>
@@ -131,6 +147,62 @@ export function ReportsTableSection() {
   return (
     <div className="bg-card rounded-xl">
       <DataTable columns={columns} data={mockReports} />
+
+      {/* Review Reporters Dialog */}
+      <Dialog open={isReportersOpen} onOpenChange={setIsReportersOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reporter Details</DialogTitle>
+            <DialogDescription>
+              Review the users who submitted reports against this {selectedReport?.targetType}.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedReport && (
+            <div className="space-y-4 py-4">
+              <div className="flex items-center justify-between p-3 bg-muted rounded-lg border">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <AlertTriangle className="h-4 w-4 text-warning" />
+                  Primary Reason
+                </div>
+                <Badge variant="outline">{selectedReport.reason}</Badge>
+              </div>
+
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold flex items-center gap-1">
+                  <Users className="h-4 w-4" /> Reports ({selectedReport.reporterCount})
+                </h4>
+                
+                <div className="max-h-64 overflow-y-auto space-y-2 border rounded-md p-2">
+                  {/* Mock Reporter List based on count */}
+                  {Array.from({ length: Math.min(selectedReport.reporterCount, 5) }).map((_, i) => (
+                    <div key={i} className="flex justify-between items-center p-2 hover:bg-muted/50 rounded-md">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium">User{Math.floor(Math.random() * 900) + 100}</span>
+                        <span className="text-xs text-muted-foreground mr-2">"{selectedReport.reason} - Very offensive"</span>
+                      </div>
+                      {i === 1 && <Badge variant="destructive" className="h-5 px-1"><ShieldAlert className="h-3 w-3 mr-1"/> Auto-flagged</Badge>}
+                    </div>
+                  ))}
+                  {selectedReport.reporterCount > 5 && (
+                    <p className="text-xs text-muted-foreground text-center py-2">
+                      ...and {selectedReport.reporterCount - 5} more users
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4 border-t">
+                <Button variant="outline" onClick={() => setIsReportersOpen(false)}>Close</Button>
+                <Button variant="default" onClick={() => {
+                  toast.success("All reports marked as reviewed.");
+                  setIsReportersOpen(false);
+                }}>Mark as Reviewed</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
