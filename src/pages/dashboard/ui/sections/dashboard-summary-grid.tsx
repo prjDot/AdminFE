@@ -10,7 +10,7 @@ import {
 import { useTranslation } from "react-i18next";
 
 interface DashboardSummaryGridProps {
-  timeframe: "TODAY" | "WEEKLY" | "MONTHLY";
+  daysScale: number;
 }
 
 function SummaryCard({
@@ -47,8 +47,13 @@ function SummaryCard({
   );
 }
 
-export function DashboardSummaryGrid({ timeframe }: DashboardSummaryGridProps) {
+export function DashboardSummaryGrid({ daysScale }: DashboardSummaryGridProps) {
   const { t } = useTranslation();
+
+  // Synthetic scaling based on day duration length
+  const scale = (basePerDay: number) => {
+    return (basePerDay * daysScale).toLocaleString();
+  };
 
   return (
     <div className="space-y-6">
@@ -71,31 +76,31 @@ export function DashboardSummaryGrid({ timeframe }: DashboardSummaryGridProps) {
       </div>
 
       {/* Timeframe Summary Grid */}
-      <h3 className="text-lg font-semibold tracking-tight">{t("dashboard.summary.timeframeMetrics", { timeframe: t(`dashboard.timeframe.${timeframe.toLowerCase()}`) })}</h3>
+      <h3 className="text-lg font-semibold tracking-tight">{daysScale} Day Selection Metrics</h3>
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
         <SummaryCard
           title={t("dashboard.summary.newUsers")}
-          value={timeframe === "TODAY" ? "42" : timeframe === "WEEKLY" ? "345" : "1,890"}
+          value={scale(45)}
           Icon={Users}
         />
         <SummaryCard
           title={t("dashboard.summary.announcementsPosted")}
-          value={timeframe === "TODAY" ? "3" : timeframe === "WEEKLY" ? "12" : "45"}
+          value={scale(3)}
           Icon={FileText}
         />
         <SummaryCard
           title={t("dashboard.summary.communityPosts")}
-          value={timeframe === "TODAY" ? "156" : timeframe === "WEEKLY" ? "892" : "4,120"}
+          value={scale(120)}
           Icon={MessageSquare}
         />
         <SummaryCard
           title={t("dashboard.summary.processedTasks")}
-          value={timeframe === "TODAY" ? "89" : timeframe === "WEEKLY" ? "520" : "2,300"}
+          value={scale(75)}
           Icon={CheckCircle2}
         />
         <SummaryCard
           title={t("dashboard.summary.userReports")}
-          value={timeframe === "TODAY" ? "12" : timeframe === "WEEKLY" ? "56" : "180"}
+          value={scale(8)}
           Icon={Bell}
           alert
         />

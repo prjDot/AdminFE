@@ -1,9 +1,12 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { type ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/widgets/data-table/ui/data-table";
 import { Badge } from "@/shared/ui/badge";
-import { History } from "lucide-react";
+import { History, LayoutGrid, List, FileText } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { Card, CardContent, CardHeader } from "@/shared/ui/card";
+import { ToggleGroup, ToggleGroupItem } from "@/shared/ui/toggle-group";
+import { toast } from "sonner";
 
 interface AuditLog {
   id: string;
@@ -23,6 +26,11 @@ const mockLogs: AuditLog[] = [
 
 export function AuditPage() {
   const { t } = useTranslation();
+  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
+
+  const handleRowClick = (log: AuditLog) => {
+    toast.info(`Raw Payload Log: [${log.id}] - Action by ${log.adminName}`);
+  };
 
   const columns = useMemo<ColumnDef<AuditLog>[]>(
     () => [
@@ -60,21 +68,57 @@ export function AuditPage() {
 
   return (
     <div className="p-8 space-y-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t("audit.title")}</h1>
           <p className="text-muted-foreground mt-2">
             {t("audit.description")}
           </p>
         </div>
-        <div className="p-3 bg-muted rounded-full">
-          <History className="w-6 h-6 text-muted-foreground" />
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-muted rounded-full">
+            <History className="w-6 h-6 text-muted-foreground" />
+          </div>
         </div>
       </div>
 
-      <div className="bg-card rounded-xl">
-        <DataTable columns={columns} data={mockLogs} />
+      <div className="flex justify-end p-2 border-b">
+        <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as "list" | "grid")} className="bg-card border rounded-md">
+          <ToggleGroupItem value="list" aria-label="List View">
+            <List className="h-4 w-4" />
+          </ToggleGroupItem>
+          <ToggleGroupItem value="grid" aria-label="Grid View">
+            <LayoutGrid className="h-4 w-4" />
+          </ToggleGroupItem>
+        </ToggleGroup>
       </div>
+
+      {viewMode === "list" ? (
+        <DataTable columns={columns} data={mockLogs} onRowClick={handleRowClick} />
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {mockLogs.map((log) => (
+            <Card key={log.id} className="cursor-pointer transition-all hover:-translate-y-1 hover:shadow-md hover:border-primary/50" onClick={() => handleRowClick(log)}>
+              <CardHeader className="py-3 bg-muted/10 border-b flex-row justify-between items-center sm:space-y-0">
+                <span className="text-[10px] font-mono text-muted-foreground">{log.id}</span>
+                <Badge variant={log.action.includes("Delete") || log.action.includes("Suspend") || log.action.includes("Hidden") ? "destructive" : "secondary"}>
+                  {log.action}
+                </Badge>
+              </CardHeader>
+              <CardContent className="pt-3 text-xs space-y-2">
+                <div className="flex justify-between items-center text-muted-foreground">
+                  <span className="font-medium text-foreground">{log.adminName}</span>
+                  <span>{log.timestamp}</span>
+                </div>
+                <div className="flex justify-between items-center bg-muted/30 p-2 rounded-md border text-muted-foreground">
+                  <span className="flex items-center gap-1 font-mono"><FileText className="h-3 w-3"/> {log.target}</span>
+                  <span className="font-mono">{log.ipAddress}</span>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

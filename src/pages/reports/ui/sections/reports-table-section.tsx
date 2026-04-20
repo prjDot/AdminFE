@@ -1,11 +1,13 @@
 import { useMemo, useState } from "react";
 import { type ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal, Users, AlertTriangle, ShieldAlert } from "lucide-react";
+import { MoreHorizontal, Users, AlertTriangle, ShieldAlert, LayoutGrid, List } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { DataTable } from "@/widgets/data-table/ui/data-table";
 import { Badge } from "@/shared/ui/badge";
 import { toast } from "sonner";
 import { Button } from "@/shared/ui/button";
+import { Card, CardContent, CardHeader } from "@/shared/ui/card";
+import { ToggleGroup, ToggleGroupItem } from "@/shared/ui/toggle-group";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -47,10 +49,16 @@ const mockReports: Report[] = [
 
 export function ReportsTableSection() {
   const { t } = useTranslation();
+  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   
   // Dialog State
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [isReportersOpen, setIsReportersOpen] = useState(false);
+
+  const handleRowClick = (report: Report) => {
+    setSelectedReport(report);
+    setIsReportersOpen(true);
+  };
 
   const columns = useMemo<ColumnDef<Report>[]>(
     () => [
@@ -114,12 +122,12 @@ export function ReportsTableSection() {
           return (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-8 w-8 p-0">
+                <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
                   <span className="sr-only">{t("reports.table.openMenu")}</span>
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                 <DropdownMenuLabel>{t("reports.menu.actions")}</DropdownMenuLabel>
                 <DropdownMenuItem onClick={() => toast.info("Opening reported target")}>{t("reports.menu.viewTarget")}</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => {
@@ -145,8 +153,39 @@ export function ReportsTableSection() {
   );
 
   return (
-    <div className="bg-card rounded-xl">
-      <DataTable columns={columns} data={mockReports} />
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <ToggleGroup type="single" value={viewMode} onValueChange={(v: string) => v && setViewMode(v as "list" | "grid")} className="bg-card border rounded-md">
+          <ToggleGroupItem value="list" aria-label="List View">
+            <List className="h-4 w-4" />
+          </ToggleGroupItem>
+          <ToggleGroupItem value="grid" aria-label="Grid View">
+            <LayoutGrid className="h-4 w-4" />
+          </ToggleGroupItem>
+        </ToggleGroup>
+      </div>
+
+      {viewMode === "list" ? (
+        <DataTable columns={columns} data={mockReports} onRowClick={handleRowClick} />
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {mockReports.map((report) => (
+            <Card key={report.id} className="cursor-pointer transition-all hover:-translate-y-1 hover:shadow-md hover:border-destructive/50" onClick={() => handleRowClick(report)}>
+              <CardHeader className="py-3 bg-muted/10 border-b">
+                <div className="flex justify-between items-start gap-2 mb-2">
+                  <Badge variant="outline">{report.targetType}</Badge>
+                  <span className="text-xs font-medium bg-destructive/10 text-destructive px-2 p-0.5 rounded-full">{report.reporterCount} Flags</span>
+                </div>
+                <div className="font-semibold text-sm line-clamp-2">{report.reason}</div>
+              </CardHeader>
+              <CardContent className="pt-3 text-xs text-muted-foreground flex justify-between items-center">
+                <span className="flex items-center gap-1 font-medium"><AlertTriangle className="h-3 w-3" /> {t(REPORT_STATUS_LABEL_KEY[report.status])}</span>
+                <span>{report.lastReportedAt}</span>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
       {/* Review Reporters Dialog */}
       <Dialog open={isReportersOpen} onOpenChange={setIsReportersOpen}>
@@ -174,12 +213,12 @@ export function ReportsTableSection() {
                 </h4>
                 
                 <div className="max-h-64 overflow-y-auto space-y-2 border rounded-md p-2">
-                  {/* Mock Reporter List based on count */}
+                  {/* Mock Reporter List */}
                   {Array.from({ length: Math.min(selectedReport.reporterCount, 5) }).map((_, i) => (
                     <div key={i} className="flex justify-between items-center p-2 hover:bg-muted/50 rounded-md">
                       <div className="flex flex-col">
                         <span className="text-sm font-medium">User{Math.floor(Math.random() * 900) + 100}</span>
-                        <span className="text-xs text-muted-foreground mr-2">"{selectedReport.reason} - Very offensive"</span>
+                        <span className="text-xs text-muted-foreground mr-2">"{selectedReport.reason} - Action required"</span>
                       </div>
                       {i === 1 && <Badge variant="destructive" className="h-5 px-1"><ShieldAlert className="h-3 w-3 mr-1"/> Auto-flagged</Badge>}
                     </div>
@@ -190,14 +229,6 @@ export function ReportsTableSection() {
                     </p>
                   )}
                 </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-4 border-t">
-                <Button variant="outline" onClick={() => setIsReportersOpen(false)}>Close</Button>
-                <Button variant="default" onClick={() => {
-                  toast.success("All reports marked as reviewed.");
-                  setIsReportersOpen(false);
-                }}>Mark as Reviewed</Button>
               </div>
             </div>
           )}

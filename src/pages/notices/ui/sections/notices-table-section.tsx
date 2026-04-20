@@ -1,11 +1,13 @@
 import { useMemo, useState } from "react";
 import { type ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal, Image as ImageIcon, MapPin, Calendar, User as UserIcon } from "lucide-react";
+import { MoreHorizontal, Image as ImageIcon, MapPin, Calendar, User as UserIcon, LayoutGrid, List } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { DataTable } from "@/widgets/data-table/ui/data-table";
 import { Badge } from "@/shared/ui/badge";
 import { toast } from "sonner";
 import { Button } from "@/shared/ui/button";
+import { Card, CardContent, CardHeader } from "@/shared/ui/card";
+import { ToggleGroup, ToggleGroupItem } from "@/shared/ui/toggle-group";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,9 +53,15 @@ const mockNotices: Notice[] = [
 export function NoticesTableSection() {
   const { t } = useTranslation();
   
-  // Dialog State
+  // States
   const [selectedNotice, setSelectedNotice] = useState<Notice | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
+
+  const handleRowClick = (notice: Notice) => {
+    setSelectedNotice(notice);
+    setIsDetailOpen(true);
+  };
 
   const columns = useMemo<ColumnDef<Notice>[]>(
     () => [
@@ -101,12 +109,12 @@ export function NoticesTableSection() {
           return (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-8 w-8 p-0">
+                <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
                   <span className="sr-only">{t("notices.table.openMenu")}</span>
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                 <DropdownMenuLabel>{t("notices.menu.actions")}</DropdownMenuLabel>
                 <DropdownMenuItem onClick={() => {
                   setSelectedNotice(notice);
@@ -131,8 +139,49 @@ export function NoticesTableSection() {
   );
 
   return (
-    <div className="bg-card rounded-xl">
-      <DataTable columns={columns} data={mockNotices} />
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <ToggleGroup type="single" value={viewMode} onValueChange={(v: string) => v && setViewMode(v as "list" | "grid")} className="bg-card border rounded-md">
+          <ToggleGroupItem value="list" aria-label="List View">
+            <List className="h-4 w-4" />
+          </ToggleGroupItem>
+          <ToggleGroupItem value="grid" aria-label="Grid View">
+            <LayoutGrid className="h-4 w-4" />
+          </ToggleGroupItem>
+        </ToggleGroup>
+      </div>
+
+      {viewMode === "list" ? (
+        <DataTable columns={columns} data={mockNotices} onRowClick={handleRowClick} />
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {mockNotices.map((notice) => (
+            <Card key={notice.id} className="cursor-pointer transition-all hover:-translate-y-1 hover:shadow-md hover:border-primary/50 overflow-hidden" onClick={() => handleRowClick(notice)}>
+              <div className="h-32 bg-muted flex items-center justify-center border-b">
+                <ImageIcon className="h-8 w-8 text-muted-foreground/50" />
+              </div>
+              <CardHeader className="py-3">
+                <div className="flex justify-between items-start gap-2">
+                  <div className="font-semibold text-sm line-clamp-2">{notice.title}</div>
+                </div>
+                <div className="flex gap-1 mt-2">
+                  <Badge variant="outline" className="text-[10px] h-5">{notice.animalType}</Badge>
+                  <Badge variant={
+                    notice.status === NOTICE_STATUS.FOUND || notice.status === NOTICE_STATUS.RESOLVED ? "default" :
+                    notice.status === NOTICE_STATUS.LOST ? "destructive" : "secondary"
+                  } className="text-[10px] h-5">
+                    {t(NOTICE_STATUS_LABEL_KEY[notice.status])}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0 text-xs text-muted-foreground space-y-1">
+                <div className="flex items-center gap-2"><UserIcon className="h-3 w-3" /> {notice.reporter}</div>
+                <div className="flex items-center gap-2"><Calendar className="h-3 w-3" /> {notice.date}</div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
       {/* Notice Details Dialog */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
@@ -174,16 +223,6 @@ export function NoticesTableSection() {
                   <span className="text-xs text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3"/> Location</span>
                   <p className="text-sm font-medium">Near Central Park, 5th Avenue</p>
                 </div>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2">
-                <Button variant="outline" onClick={() => setIsDetailOpen(false)}>Close</Button>
-                {selectedNotice.status !== NOTICE_STATUS.HIDDEN && (
-                  <Button variant="destructive" onClick={() => {
-                    toast.error("Notice hidden from public API");
-                    setIsDetailOpen(false);
-                  }}>Hide Notice</Button>
-                )}
               </div>
             </div>
           )}
