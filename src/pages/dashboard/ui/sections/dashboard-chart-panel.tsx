@@ -22,7 +22,7 @@ export function DashboardChartPanel({ chartData }: DashboardChartPanelProps) {
             <XAxis dataKey="name" axisLine={false} tickLine={false} />
             <YAxis axisLine={false} tickLine={false} />
             <Tooltip />
-            <Line type="monotone" dataKey="notices" name={t("dashboard.summary.reportedNotices")} stroke="var(--color-primary)" strokeWidth={2} dot={false} />
+            <Line type="monotone" dataKey="notices" name={t("dashboard.charts.newNotices")} stroke="var(--color-primary)" strokeWidth={2} dot={false} />
           </LineChart>
         </ResponsiveContainer>
       </div>

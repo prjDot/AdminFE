@@ -13,7 +13,8 @@
       "forceSyncNow": "Force Sync Now",
       "inviteAdmin": "Invite Admin",
       "manageCategories": "Manage Categories",
-      "sendNotification": "Send Notification"
+      "sendNotification": "Send Notification",
+      "save": "Save"
     },
     "loading": "Loading...",
     "feedback": {
@@ -44,6 +45,11 @@
       "label": "Language",
       "ko": "Korean",
       "en": "English"
+    },
+    "all": "All",
+    "view": {
+      "list": "List view",
+      "grid": "Grid view"
     }
   },
   "errors": {
@@ -138,6 +144,21 @@
       "changeRole": "Change Role",
       "unsuspend": "Unsuspend Account",
       "suspend": "Suspend Account"
+    },
+    "searchPlaceholder": "Search by name or email",
+    "filters": {
+      "allStatus": "All Status"
+    },
+    "profile": {
+      "title": "User Profile",
+      "description": "Review profile details and recent activity.",
+      "joinedAt": "Joined {{date}}"
+    },
+    "feedback": {
+      "copiedUserId": "User ID copied.",
+      "changeRoleQueued": "Queued role change request for {{name}}.",
+      "suspended": "Suspended {{name}}.",
+      "unsuspended": "Unsuspended {{name}}."
     }
   },
   "notices": {
@@ -165,6 +186,19 @@
       "resolved": "Resolved",
       "hidden": "Hidden",
       "reported": "Reported"
+    },
+    "searchPlaceholder": "Search by title or reporter",
+    "detail": {
+      "title": "Notice Details",
+      "description": "Review notice content and metadata.",
+      "imagePlaceholder": "Original image preview",
+      "locationLabel": "Location",
+      "locationValue": "Near Jung-gu, Seoul"
+    },
+    "feedback": {
+      "editOpen": "Opening notice edit flow.",
+      "hidden": "Notice has been hidden.",
+      "restored": "Notice has been restored."
     }
   },
   "community": {
@@ -177,13 +211,28 @@
       "replies": "Replies",
       "postedDate": "Posted Date",
       "actions": "Actions",
-      "openMenu": "Open menu"
+      "openMenu": "Open menu",
+      "likes": "Likes",
+      "comments": "Comments",
+      "createdAt": "Created At"
     },
     "menu": {
       "actions": "Actions",
       "viewPostReplies": "View Post & Replies",
       "viewPollResults": "View Poll Results (if any)",
-      "deletePost": "Delete Post"
+      "deletePost": "Delete Post",
+      "viewPost": "View Post"
+    },
+    "postedBy": "Posted by {{author}}",
+    "detail": {
+      "title": "Community Post Details",
+      "description": "Review post content and metadata.",
+      "meta": "{{author}} · {{date}}",
+      "mockBody": "Preview area for community post body."
+    },
+    "feedback": {
+      "deleted": "Delete request has been queued.",
+      "forceDeleted": "Post has been force deleted."
     }
   },
   "reports": {
@@ -213,7 +262,21 @@
     },
     "badges": {
       "priority": "Priority",
-      "autoHidden": "Auto-Hidden"
+      "autoHidden": "Auto-Hidden",
+      "autoFlagged": "Auto-flagged"
+    },
+    "flagsCount": "{{count}} flags",
+    "feedback": {
+      "openTarget": "Opening reported target item.",
+      "deleteWarn": "Requested delete and warning action.",
+      "dismissed": "Report dismissed."
+    },
+    "reporters": {
+      "title": "Reporter Details",
+      "description": "Review reporters for {{targetType}}.",
+      "primaryReason": "Primary Reason",
+      "listTitle": "Reports ({{count}})",
+      "more": "...and {{count}} more"
     }
   },
   "notifications": {
@@ -254,15 +317,51 @@
     "status": {
       "operational": "Operational",
       "degraded": "Degraded",
-      "partialOutage": "Partial Outage"
+      "partialOutage": "Partial Outage",
+      "allOperational": "All systems operational"
     },
     "uptime": {
       "title": "System Uptime (90 Days)",
       "overall": "Overall Uptime"
     },
     "incidents": {
-      "title": "Recent Incidents"
-    }
+      "title": "Recent Incidents",
+      "mediaLatency": "Media queue latency increased under load.",
+      "dbBackup": "Routine database backup completed.",
+      "apiOutage": "Short API outage has been resolved."
+    },
+    "manualOverride": "Manual Override",
+    "manualControlDescription": "Manually adjust service state for testing or announcements.",
+    "overrideTarget": "Target Service",
+    "selectTarget": "Select target",
+    "selectStatus": "Select status",
+    "target": {
+      "global": "Global System"
+    },
+    "coreServices": "Core Services",
+    "dashboardRefresh": "Monitoring dashboard refreshes every 60 seconds.",
+    "metrics": {
+      "uptime": "Uptime",
+      "latency": "Latency"
+    },
+    "telemetry": {
+      "title": "Service Telemetry",
+      "description": "Detailed metrics and logs for the selected service.",
+      "memory": "Memory Usage",
+      "cpu": "CPU Usage",
+      "totalReq": "Total Requests",
+      "dropRate": "Drop Rate",
+      "consoleTitle": "Instance Health Console"
+    },
+    "actions": {
+      "reboot": "Reboot Process",
+      "viewLogs": "View Logs"
+    },
+    "feedback": {
+      "manualOverrideApplied": "Global status was manually updated.",
+      "rebootRequested": "Instance reboot requested."
+    },
+    "recentIncidents": "Recent Incidents"
   },
   "audit": {
     "title": "Audit Logs",
@@ -289,7 +388,30 @@
     "shelterApiUrl": "Shelter API URL",
     "animalTypes": "Animal Types / Breeds Dictionary",
     "regionCodes": "Region Codes Mapping",
-    "noticeStatusLabels": "Notice Status Labels"
+    "noticeStatusLabels": "Notice Status Labels",
+    "generalDescription": "Configure foundational behavior and display settings.",
+    "logoLabel": "Platform Logo",
+    "uploadLogo": "Upload Logo",
+    "removeLogo": "Remove",
+    "logoGuide": "Supported formats: PNG, JPG, SVG (recommended 512x512)",
+    "defaultLanguage": "Default System Language",
+    "selectLanguage": "Select language",
+    "languages": {
+      "ko": "Korean",
+      "en": "English (US)"
+    },
+    "integrationDescription": "Manage API keys, webhooks, and external synchronization.",
+    "shelterSyncTitle": "Shelter API Sync",
+    "autoSyncTitle": "Auto-sync Shelter Data",
+    "autoSyncDescription": "Automatically fetch new data from the national API every hour.",
+    "apiEndpointLabel": "National API Endpoint",
+    "pushSectionTitle": "Push Notifications (FCM)",
+    "copyMaskedKey": "Copy masked key",
+    "globalPushTitle": "Global Push Alerts",
+    "globalPushDescription": "Allow system-wide push broadcasts to mobile users.",
+    "feedback": {
+      "maskedKeyCopied": "Masked key copied."
+    }
   },
   "table": {
     "noResults": "No results."
