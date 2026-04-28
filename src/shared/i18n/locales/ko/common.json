@@ -415,5 +415,14 @@
   },
   "table": {
     "noResults": "결과가 없습니다."
+  },
+  "auth": {
+    "errors": {
+      "invalidCredentials": "이메일 또는 비밀번호가 올바르지 않습니다.",
+      "locked": "로그인 시도가 너무 많습니다. {{seconds}}초 후 다시 시도하세요.",
+      "invalidOtp": "인증 코드가 올바르지 않습니다.",
+      "otpFlowInvalid": "인증 흐름이 유효하지 않습니다. 다시 로그인해주세요.",
+      "unexpected": "인증 처리 중 오류가 발생했습니다."
+    }
   }
 }

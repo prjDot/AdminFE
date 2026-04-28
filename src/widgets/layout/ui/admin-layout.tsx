@@ -1,13 +1,25 @@
+import { useEffect } from "react";
 import { Outlet, Navigate, useNavigation } from "react-router-dom";
 import { useAuthStore } from "@/features/auth/model/auth-store";
 import { AdminSidebar } from "./admin-sidebar";
 import { AdminHeader } from "./admin-header";
 import { Toaster } from "@/shared/ui/sonner";
+import { RoutePending } from "@/shared/ui/route-pending";
 
 export function AdminLayout() {
+  const bootstrapped = useAuthStore((state) => state.bootstrapped);
   const step = useAuthStore((state) => state.step);
+  const bootstrapSession = useAuthStore((state) => state.bootstrapSession);
   const navigation = useNavigation();
   const isNavigating = navigation.state !== "idle";
+
+  useEffect(() => {
+    bootstrapSession();
+  }, [bootstrapSession]);
+
+  if (!bootstrapped) {
+    return <RoutePending />;
+  }
 
   if (step !== "AUTHENTICATED") {
     return <Navigate to="/login" replace />;

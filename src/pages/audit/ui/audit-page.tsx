@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader } from "@/shared/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/shared/ui/toggle-group";
 import { toast } from "sonner";
+import { readAuditLogs } from "@/features/audit/model/audit-log-store";
 
 interface AuditLog {
   id: string;
@@ -27,9 +28,13 @@ const mockLogs: AuditLog[] = [
 export function AuditPage() {
   const { t } = useTranslation();
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
+  const logs = useMemo(() => {
+    const dynamicLogs = readAuditLogs();
+    return [...dynamicLogs, ...mockLogs];
+  }, []);
 
   const handleRowClick = (log: AuditLog) => {
-    toast.info(`Raw Payload Log: [${log.id}] - Action by ${log.adminName}`);
+    toast.info(`${log.id} · ${log.adminName}`);
   };
 
   const columns = useMemo<ColumnDef<AuditLog>[]>(
@@ -94,10 +99,10 @@ export function AuditPage() {
       </div>
 
       {viewMode === "list" ? (
-        <DataTable columns={columns} data={mockLogs} onRowClick={handleRowClick} />
+        <DataTable columns={columns} data={logs} onRowClick={handleRowClick} />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {mockLogs.map((log) => (
+          {logs.map((log) => (
             <Card key={log.id} className="cursor-pointer transition-all hover:-translate-y-1 hover:shadow-md hover:border-primary/50" onClick={() => handleRowClick(log)}>
               <CardHeader className="py-3 bg-muted/10 border-b flex-row justify-between items-center sm:space-y-0">
                 <span className="text-[10px] font-mono text-muted-foreground">{log.id}</span>

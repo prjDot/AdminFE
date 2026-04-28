@@ -1,0 +1,6 @@
+- generic [ref=e4]:
+  - heading "관리자 로그인" [level=1] [ref=e5]
+  - generic [ref=e6]:
+    - textbox "아이디" [ref=e7]
+    - textbox "비밀번호" [ref=e8]
+    - button "로그인" [ref=e9]

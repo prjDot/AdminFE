@@ -1,64 +1,66 @@
-import { useState } from "react";
-import { Button } from "@/shared/ui/button";
-import { Input } from "@/shared/ui/input";
-import { useAuthStore } from "@/features/auth/model/auth-store";
-import { useNavigate, Navigate } from "react-router-dom";
-import { ROLES } from "@/shared/config/constants";
+import { useEffect, useState } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useAuthStore } from "@/features/auth/model/auth-store";
+import { Button } from "@/shared/ui/button";
+import { FormStatus } from "@/shared/ui/form-status";
+import { Input } from "@/shared/ui/input";
 
 export function OTPPage() {
   const { t } = useTranslation();
   const [code, setCode] = useState("");
-  const { step, tempEmail, verifyOTP } = useAuthStore();
+  const [errorKey, setErrorKey] = useState<string | null>(null);
+  const { step, tempEmail, verifyOtp, bootstrapSession } = useAuthStore();
   const navigate = useNavigate();
 
-  // 정상 경로(/login -> /login/mfa)를 거치지 않았으면 로그인으로 돌려보냄
+  useEffect(() => {
+    bootstrapSession();
+  }, [bootstrapSession]);
+
   if (step === "NONE") {
     return <Navigate to="/login" replace />;
   }
 
-  // 이미 인증 완료된 경우 대시보드로
   if (step === "AUTHENTICATED") {
     return <Navigate to="/dashboard" replace />;
   }
 
-  const handleVerify = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (code.length >= 6) {
-      verifyOTP({
-        id: "admin-1",
-        email: tempEmail || "admin@pawgen.com",
-        name: "Super Admin",
-        role: ROLES.ADMIN,
-      });
-      navigate("/dashboard");
+  const handleVerify = (event: React.FormEvent) => {
+    event.preventDefault();
+
+    const result = verifyOtp(code);
+    if (!result.ok) {
+      setErrorKey(result.messageKey ?? "auth.errors.unexpected");
+      return;
     }
+
+    setErrorKey(null);
+    navigate("/dashboard");
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-muted">
-      <div className="p-8 bg-card rounded-lg shadow-sm border w-full max-w-sm">
-        <h1 className="text-2xl font-bold mb-2 text-center">{t("otp.title")}</h1>
-        <p className="text-sm text-muted-foreground text-center mb-6">
-          {t("otp.description")} <strong>{tempEmail}</strong>.
+    <div className="flex min-h-screen items-center justify-center bg-muted px-4">
+      <div className="w-full max-w-sm rounded-lg border bg-card p-6 shadow-sm sm:p-8">
+        <h1 className="mb-2 text-center text-2xl font-bold">{t("otp.title")}</h1>
+        <p className="mb-6 text-center text-sm text-muted-foreground">
+          {t("otp.description")} <strong>{tempEmail}</strong>
         </p>
         <form onSubmit={handleVerify} className="space-y-4">
-          <Input 
-            type="text" 
-            placeholder={t("otp.codePlaceholder")} 
+          <Input
+            type="text"
+            inputMode="numeric"
+            placeholder={t("otp.codePlaceholder")}
             value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+            onChange={(event) => setCode(event.target.value.replace(/\D/g, ""))}
             maxLength={6}
-            required 
-            className="text-center text-2xl tracking-[0.5em] font-mono h-14"
+            required
+            className="h-14 text-center font-mono text-2xl tracking-[0.5em]"
           />
-          <Button type="submit" className="w-full h-11" disabled={code.length < 6}>
+          {errorKey && <FormStatus tone="error" message={t(errorKey)} />}
+          <Button type="submit" className="h-11 w-full" disabled={code.length < 6}>
             {t("otp.verify")}
           </Button>
         </form>
-        <p className="text-xs text-muted-foreground text-center mt-4">
-          {t("otp.testingHint")}
-        </p>
       </div>
     </div>
   );

@@ -415,5 +415,14 @@
   },
   "table": {
     "noResults": "No results."
+  },
+  "auth": {
+    "errors": {
+      "invalidCredentials": "Invalid email or password.",
+      "locked": "Too many login attempts. Try again in {{seconds}} seconds.",
+      "invalidOtp": "Invalid verification code.",
+      "otpFlowInvalid": "Invalid authentication flow. Please sign in again.",
+      "unexpected": "An authentication error occurred."
+    }
   }
 }

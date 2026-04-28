@@ -161,10 +161,10 @@ export function UsersTableSection() {
             onChange={(event) => setSearchTerm(event.target.value)}
           />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start">
           <Filter className="h-4 w-4 text-muted-foreground" />
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[150px] bg-card">
+            <SelectTrigger className="w-[140px] bg-card sm:w-[150px]">
               <SelectValue placeholder={t("users.filters.allStatus")} />
             </SelectTrigger>
             <SelectContent>
@@ -174,7 +174,7 @@ export function UsersTableSection() {
               <SelectItem value="SUSPENDED">{t("common.status.suspended")}</SelectItem>
             </SelectContent>
           </Select>
-          <ToggleGroup type="single" value={viewMode} onValueChange={(value: string) => value && setViewMode(value as "list" | "grid")} className="ml-2 rounded-md border bg-card">
+          <ToggleGroup type="single" value={viewMode} onValueChange={(value: string) => value && setViewMode(value as "list" | "grid")} className="rounded-md border bg-card sm:ml-2">
             <ToggleGroupItem value="list" aria-label={t("common.view.list")}>
               <List className="h-4 w-4" />
             </ToggleGroupItem>
@@ -210,7 +210,7 @@ export function UsersTableSection() {
                   </div>
                   <div className="flex items-center justify-between text-muted-foreground">
                     <span className="flex items-center gap-1"><ShieldAlert className="h-3 w-3" />{t("users.table.role")}</span>
-                    <Badge variant="outline" className="font-normal">{user.role}</Badge>
+                    <Badge variant="outline" className="max-w-[150px] truncate font-normal">{user.role}</Badge>
                   </div>
                 </CardContent>
               </Card>
