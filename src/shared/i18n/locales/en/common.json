@@ -83,7 +83,9 @@
     "title": "Admin Login",
     "username": "Username",
     "password": "Password",
-    "signIn": "Sign In"
+    "signIn": "Sign In",
+    "googleDescription": "Start admin authentication with your Google account.",
+    "googleSignIn": "Continue with Google"
   },
   "otp": {
     "title": "2-Step Verification",
@@ -91,6 +93,14 @@
     "codePlaceholder": "000000",
     "verify": "Verify",
     "testingHint": "For testing, any 6-digit number is accepted."
+  },
+  "passkey": {
+    "enrollTitle": "Register Passkey",
+    "verifyTitle": "Verify Passkey",
+    "enrollDescription": "Register a passkey for this admin account.",
+    "verifyDescription": "Confirm admin access with your registered passkey.",
+    "startEnroll": "Register passkey",
+    "startVerify": "Verify with passkey"
   },
   "dashboard": {
     "title": "Dashboard Overview",
@@ -110,7 +120,12 @@
       "announcementsPosted": "Notices Posted",
       "communityPosts": "Community Posts",
       "processedTasks": "Processed Tasks",
-      "userReports": "User Reports"
+      "userReports": "User Reports",
+      "todayReports": "Today's Reports",
+      "pendingReports": "Pending Reports",
+      "selectedRangeMetrics": "Selected Range Metrics",
+      "hiddenContent": "Hidden Content",
+      "sanctionedUsers": "Sanctioned Users"
     },
     "charts": {
       "timeline": "Chart: Reported & Resolved (Timeline)",
@@ -123,6 +138,15 @@
       "badge": "Priority",
       "target": "Target: Notice #{{id}}",
       "reason": "Reported for spam. Needs immediate attention."
+    },
+    "errors": {
+      "summaryLoadFailed": "Failed to load dashboard metrics.",
+      "timelineLoadFailed": "Failed to load the timeline.",
+      "priorityLoadFailed": "Failed to load priority items."
+    },
+    "empty": {
+      "timeline": "No timeline data to display.",
+      "priorities": "No priority items."
     }
   },
   "users": {
@@ -422,7 +446,17 @@
       "locked": "Too many login attempts. Try again in {{seconds}} seconds.",
       "invalidOtp": "Invalid verification code.",
       "otpFlowInvalid": "Invalid authentication flow. Please sign in again.",
-      "unexpected": "An authentication error occurred."
+      "unexpected": "An authentication error occurred.",
+      "firebaseConfigMissing": "Firebase configuration is missing. Check the environment variables.",
+      "emailVerificationRequired": "Admin email verification is required. Verify the email and sign in again.",
+      "passkeyFlowInvalid": "The passkey authentication step is invalid. Sign in again.",
+      "passkeyChallengeInvalid": "The passkey challenge expired. Try again.",
+      "passkeyInvalid": "Passkey verification failed. Try again.",
+      "passkeyRpIdMismatch": "The passkey domain does not match the current page. Open the admin app on the production domain or check the backend rpId setting.",
+      "passkeyCancelled": "Passkey authentication was canceled or timed out.",
+      "passkeyAlreadyRegistered": "This passkey is already registered. Choose another authenticator or sign in again.",
+      "passkeyCredentialMissing": "The browser did not return passkey credential data.",
+      "passkeyOptionsInvalid": "The passkey registration options are invalid. Check the server WebAuthn options response."
     }
   }
 }

@@ -1,5 +1,6 @@
 import { ROLES } from "@/shared/config/constants";
 import type { AdminUser } from "@/features/auth/model/auth-store";
+import { AUTH_SESSION_STORAGE_KEY } from "@/shared/api/admin-session-storage";
 
 export type LoginFailureReason = "INVALID_CREDENTIALS" | "LOCKED";
 
@@ -19,7 +20,6 @@ interface PersistedAuthSession {
   expiresAt: number;
 }
 
-const AUTH_SESSION_STORAGE_KEY = "paw-admin-auth-session";
 const SESSION_TTL_MS = 30 * 60 * 1000;
 
 const MOCK_ADMIN_OTP_CODE = (import.meta.env.VITE_MOCK_ADMIN_OTP_CODE as string | undefined) ?? "246810";

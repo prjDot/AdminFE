@@ -1,15 +1,28 @@
 import { create } from "zustand";
 import { appendAuditLog } from "@/features/audit/model/audit-log-store";
 import {
-  checkLoginCredentials,
-  checkOtpCode,
-  clearAuthSession,
-  createAuthenticatedAdmin,
-  getLoginLockRemainingMs,
-  isOtpRequired,
-  readAuthSession,
-  startAuthSession,
-} from "@/features/auth/model/mock-auth-service";
+  adminLogin,
+  getAdminSessionState,
+  getPasskeyMfaOptions,
+  getPasskeyRegisterOptions,
+  logoutAdminSession,
+  type AdminAuthSessionResponse,
+  type AdminLoginResponse,
+  type AdminPasskeyOptionsResponse,
+  verifyPasskeyMfa,
+  verifyPasskeyRegistration,
+} from "@/features/auth/api/admin-auth-api";
+import { getGoogleFirebaseIdToken, signOutFirebase } from "@/features/auth/api/firebase-auth";
+import {
+  createPasskeyCredential,
+  getPasskeyCredential,
+} from "@/features/auth/lib/webauthn";
+import {
+  clearStoredAdminSession,
+  readStoredAdminAccessToken,
+  saveStoredAdminSession,
+} from "@/shared/api/admin-session-storage";
+import { ApiResponseError } from "@/shared/api/api-response";
 import { type Role } from "@/shared/config/constants";
 
 export interface AdminUser {
@@ -19,25 +32,127 @@ export interface AdminUser {
   role: Role;
 }
 
+type AuthStep =
+  | "NONE"
+  | "EMAIL_VERIFICATION_REQUIRED"
+  | "PASSKEY_ENROLL"
+  | "MFA_PENDING"
+  | "AUTHENTICATED";
+
 interface AuthActionResult {
   ok: boolean;
-  nextStep?: "OTP_REQUIRED" | "AUTHENTICATED";
+  nextStep?: AuthStep;
   messageKey?: string;
-  remainingSeconds?: number;
+  message?: string;
 }
 
 interface AuthState {
   bootstrapped: boolean;
-  step: "NONE" | "OTP_REQUIRED" | "AUTHENTICATED";
+  step: AuthStep;
   tempEmail: string | null;
   admin: AdminUser | null;
+  permissions: string[];
+  expiresAt: string | null;
+  pendingPasskey: AdminPasskeyOptionsResponse | null;
+  isAuthenticating: boolean;
   lockRemainingMs: number;
 
-  bootstrapSession: () => void;
-  requestLogin: (email: string, password: string) => AuthActionResult;
-  verifyOtp: (code: string) => AuthActionResult;
-  logout: (reason?: "USER" | "SESSION_EXPIRED") => void;
+  bootstrapSession: () => Promise<void>;
+  requestGoogleLogin: () => Promise<AuthActionResult>;
+  completePasskeyStep: () => Promise<AuthActionResult>;
+  logout: (reason?: "USER" | "SESSION_EXPIRED") => Promise<void>;
   forceLogout: () => void;
+}
+
+function toAdminUser(admin: AdminAuthSessionResponse["admin"]): AdminUser {
+  return {
+    id: admin.id,
+    email: admin.email,
+    name: admin.name,
+    role: admin.role,
+  };
+}
+
+function persistSession(session: AdminAuthSessionResponse) {
+  saveStoredAdminSession({
+    token: session.accessToken,
+    expiresAt: session.expiresAt,
+    stage: session.stage,
+    admin: session.admin,
+    permissions: session.permissions,
+  });
+}
+
+function getErrorKey(error: unknown) {
+  if (error instanceof Error && error.message === "FIREBASE_CONFIG_MISSING") {
+    return "auth.errors.firebaseConfigMissing";
+  }
+
+  if (error instanceof ApiResponseError) {
+    if (error.code === "PASSKEY_CHALLENGE_INVALID") {
+      return "auth.errors.passkeyChallengeInvalid";
+    }
+
+    if (error.code === "PASSKEY_INVALID") {
+      return "auth.errors.passkeyInvalid";
+    }
+
+    if (error.code === "ADMIN_AUTH_STEP_INVALID") {
+      return "auth.errors.passkeyFlowInvalid";
+    }
+  }
+
+  if (error instanceof DOMException) {
+    if (error.name === "SecurityError") {
+      return "auth.errors.passkeyRpIdMismatch";
+    }
+
+    if (error.name === "NotAllowedError") {
+      return "auth.errors.passkeyCancelled";
+    }
+
+    if (error.name === "InvalidStateError") {
+      return "auth.errors.passkeyAlreadyRegistered";
+    }
+  }
+
+  if (error instanceof Error && error.message === "PASSKEY_CREDENTIAL_MISSING") {
+    return "auth.errors.passkeyCredentialMissing";
+  }
+
+  if (
+    error instanceof TypeError &&
+    error.message.includes("PublicKeyCredentialCreationOptions.pubKeyCredParams")
+  ) {
+    return "auth.errors.passkeyOptionsInvalid";
+  }
+
+  return "auth.errors.unexpected";
+}
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof ApiResponseError) {
+    return [
+      error.code ? `code=${error.code}` : null,
+      `status=${error.status}`,
+      error.requestId ? `requestId=${error.requestId}` : null,
+      error.message,
+    ]
+      .filter(Boolean)
+      .join(" / ");
+  }
+
+  if (error instanceof DOMException) {
+    return `${error.name}: ${error.message}`;
+  }
+
+  return error instanceof Error ? error.message : undefined;
+}
+
+function logAuthError(context: string, error: unknown) {
+  if (import.meta.env.DEV && typeof reportError === "function") {
+    reportError(error instanceof Error ? error : new Error(`[admin-auth] ${context}`));
+  }
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -45,147 +160,171 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   step: "NONE",
   tempEmail: null,
   admin: null,
+  permissions: [],
+  expiresAt: null,
+  pendingPasskey: null,
+  isAuthenticating: false,
   lockRemainingMs: 0,
 
-  bootstrapSession: () => {
+  bootstrapSession: async () => {
     if (get().bootstrapped) {
       return;
     }
 
-    const session = readAuthSession();
-
-    if (!session) {
-      set({
-        bootstrapped: true,
-        step: "NONE",
-        admin: null,
-      });
+    const token = readStoredAdminAccessToken();
+    if (!token) {
+      set({ bootstrapped: true, step: "NONE", admin: null });
       return;
     }
 
-    set({
-      bootstrapped: true,
-      step: "AUTHENTICATED",
-      admin: session.admin,
-      tempEmail: null,
-    });
+    try {
+      const session = await getAdminSessionState();
 
-    appendAuditLog({
-      adminName: session.admin.name,
-      action: "Session Restored",
-      target: session.admin.email,
-    });
-  },
+      if (!session.authenticated || !session.admin || !session.stage) {
+        clearStoredAdminSession();
+        set({ bootstrapped: true, step: "NONE", admin: null });
+        return;
+      }
 
-  requestLogin: (email, password) => {
-    const result = checkLoginCredentials(email, password);
-
-    if (!result.ok) {
-      const remainingMs = result.remainingLockMs ?? getLoginLockRemainingMs();
-      const remainingSeconds = Math.max(1, Math.ceil(remainingMs / 1000));
-      const isLocked = result.reason === "LOCKED";
-
-      set({ lockRemainingMs: remainingMs });
-      appendAuditLog({
-        adminName: "Unknown",
-        action: isLocked ? "Login Blocked" : "Login Failed",
-        target: email.trim().toLowerCase() || "unknown-email",
-      });
-
-      return {
-        ok: false,
-        messageKey: isLocked ? "auth.errors.locked" : "auth.errors.invalidCredentials",
-        remainingSeconds,
-      };
-    }
-
-    const normalizedEmail = email.trim().toLowerCase();
-    const requireOtp = isOtpRequired();
-
-    if (requireOtp) {
       set({
-        step: "OTP_REQUIRED",
-        tempEmail: normalizedEmail,
-        lockRemainingMs: 0,
+        bootstrapped: true,
+        step: session.stage,
+        admin: toAdminUser({ ...session.admin, role: session.admin.role }),
+        permissions: session.permissions,
+        expiresAt: session.expiresAt,
+        pendingPasskey: null,
+      });
+    } catch {
+      clearStoredAdminSession();
+      set({ bootstrapped: true, step: "NONE", admin: null });
+    }
+  },
+
+  requestGoogleLogin: async () => {
+    set({ isAuthenticating: true });
+
+    try {
+      const firebaseIdToken = await getGoogleFirebaseIdToken();
+      const result = await adminLogin(firebaseIdToken);
+
+      if (result.nextStep === "EMAIL_VERIFICATION_REQUIRED") {
+        clearStoredAdminSession();
+        set({
+          step: "EMAIL_VERIFICATION_REQUIRED",
+          tempEmail: null,
+          admin: null,
+          pendingPasskey: null,
+          isAuthenticating: false,
+        });
+        return { ok: true, nextStep: "EMAIL_VERIFICATION_REQUIRED" };
+      }
+
+      if (!result.session) {
+        throw new Error("ADMIN_SESSION_MISSING");
+      }
+
+      persistSession(result.session);
+      set({
+        step: result.session.stage,
+        tempEmail: result.session.admin.email,
+        admin: toAdminUser(result.session.admin),
+        permissions: result.session.permissions,
+        expiresAt: result.session.expiresAt,
+        pendingPasskey: result.passkey,
+        isAuthenticating: false,
       });
 
       appendAuditLog({
-        adminName: "Unknown",
-        action: "Password Verified",
-        target: normalizedEmail || "unknown-email",
+        adminName: result.session.admin.name,
+        action: "Admin Login Step Verified",
+        target: result.session.admin.email,
       });
 
-      return { ok: true, nextStep: "OTP_REQUIRED" };
-    }
-
-    const admin = createAuthenticatedAdmin(normalizedEmail);
-    startAuthSession(admin);
-
-    set({
-      step: "AUTHENTICATED",
-      admin,
-      tempEmail: null,
-      lockRemainingMs: 0,
-    });
-
-    appendAuditLog({
-      adminName: admin.name,
-      action: "Login Success (OTP Bypassed)",
-      target: admin.email,
-    });
-
-    return { ok: true, nextStep: "AUTHENTICATED" };
-  },
-
-  verifyOtp: (code) => {
-    const { tempEmail } = get();
-    if (!tempEmail) {
+      return { ok: true, nextStep: result.session.stage };
+    } catch (error) {
+      logAuthError("google-login", error);
+      clearStoredAdminSession();
+      set({ isAuthenticating: false, step: "NONE", pendingPasskey: null });
       return {
         ok: false,
-        messageKey: "auth.errors.otpFlowInvalid",
+        messageKey: getErrorKey(error),
+        message: getErrorMessage(error),
       };
     }
+  },
 
-    const result = checkOtpCode(code);
-    if (!result.ok) {
+  completePasskeyStep: async () => {
+    const { step, pendingPasskey } = get();
+
+    if (step !== "PASSKEY_ENROLL" && step !== "MFA_PENDING") {
+      return { ok: false, messageKey: "auth.errors.passkeyFlowInvalid" };
+    }
+
+    set({ isAuthenticating: true });
+
+    try {
+      const options =
+        pendingPasskey ??
+        (step === "PASSKEY_ENROLL"
+          ? await getPasskeyRegisterOptions()
+          : await getPasskeyMfaOptions());
+      const credential =
+        step === "PASSKEY_ENROLL"
+          ? await createPasskeyCredential(options.publicKey)
+          : await getPasskeyCredential(options.publicKey);
+      const session =
+        step === "PASSKEY_ENROLL"
+          ? await verifyPasskeyRegistration(options.challengeId, credential)
+          : await verifyPasskeyMfa(options.challengeId, credential);
+
+      persistSession(session);
+      set({
+        step: "AUTHENTICATED",
+        admin: toAdminUser(session.admin),
+        permissions: session.permissions,
+        expiresAt: session.expiresAt,
+        pendingPasskey: null,
+        isAuthenticating: false,
+      });
+
       appendAuditLog({
-        adminName: "Unknown",
-        action: "OTP Failed",
-        target: tempEmail,
+        adminName: session.admin.name,
+        action: "Admin Passkey Verified",
+        target: session.admin.email,
       });
 
+      return { ok: true, nextStep: "AUTHENTICATED" };
+    } catch (error) {
+      logAuthError("passkey-step", error);
+      set({ isAuthenticating: false, pendingPasskey: null });
       return {
         ok: false,
-        messageKey: "auth.errors.invalidOtp",
+        messageKey: getErrorKey(error),
+        message: getErrorMessage(error),
       };
     }
-
-    const admin = createAuthenticatedAdmin(tempEmail);
-    startAuthSession(admin);
-
-    set({
-      step: "AUTHENTICATED",
-      admin,
-      tempEmail: null,
-    });
-
-    appendAuditLog({
-      adminName: admin.name,
-      action: "Login Success",
-      target: admin.email,
-    });
-
-    return { ok: true };
   },
 
-  logout: (reason = "USER") => {
+  logout: async (reason = "USER") => {
     const { admin } = get();
-    clearAuthSession();
+
+    try {
+      if (readStoredAdminAccessToken()) {
+        await logoutAdminSession();
+      }
+    } catch {
+      // Local cleanup is still required if the remote session is already invalid.
+    }
+
+    await signOutFirebase();
+    clearStoredAdminSession();
     set({
       step: "NONE",
       admin: null,
       tempEmail: null,
-      lockRemainingMs: getLoginLockRemainingMs(),
+      permissions: [],
+      expiresAt: null,
+      pendingPasskey: null,
     });
 
     appendAuditLog({
@@ -196,6 +335,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   forceLogout: () => {
-    get().logout("SESSION_EXPIRED");
+    void get().logout("SESSION_EXPIRED");
   },
 }));
+
+export type { AuthActionResult, AuthStep, AdminLoginResponse };

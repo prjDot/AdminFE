@@ -1,82 +1,97 @@
 import { useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { ShieldCheck } from "lucide-react";
 import { useAuthStore } from "@/features/auth/model/auth-store";
+import { isFirebaseConfigured } from "@/features/auth/api/firebase-auth";
 import { Button } from "@/shared/ui/button";
 import { FormStatus } from "@/shared/ui/form-status";
-import { Input } from "@/shared/ui/input";
 
 export function LoginPage() {
   const { t } = useTranslation();
   const bootstrapped = useAuthStore((state) => state.bootstrapped);
   const step = useAuthStore((state) => state.step);
   const bootstrapSession = useAuthStore((state) => state.bootstrapSession);
-  const requestLogin = useAuthStore((state) => state.requestLogin);
+  const requestGoogleLogin = useAuthStore((state) => state.requestGoogleLogin);
+  const isAuthenticating = useAuthStore((state) => state.isAuthenticating);
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [errorKey, setErrorKey] = useState<string | null>(null);
-  const [errorSeconds, setErrorSeconds] = useState<number | undefined>(undefined);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    bootstrapSession();
+    void bootstrapSession();
   }, [bootstrapSession]);
 
   if (bootstrapped && step === "AUTHENTICATED") {
     return <Navigate to="/dashboard" replace />;
   }
 
-  const handleLogin = (event: React.FormEvent) => {
-    event.preventDefault();
+  if (bootstrapped && (step === "PASSKEY_ENROLL" || step === "MFA_PENDING")) {
+    return <Navigate to="/login/mfa" replace />;
+  }
 
-    const result = requestLogin(email, password);
+  const handleGoogleLogin = async () => {
+    setErrorKey(null);
+    setErrorMessage(null);
+    const result = await requestGoogleLogin();
+
     if (!result.ok) {
       setErrorKey(result.messageKey ?? "auth.errors.unexpected");
-      setErrorSeconds(result.remainingSeconds);
+      setErrorMessage(result.message ?? null);
       return;
     }
 
-    setErrorKey(null);
-    setErrorSeconds(undefined);
-    navigate(result.nextStep === "OTP_REQUIRED" ? "/login/mfa" : "/dashboard");
+    if (result.nextStep === "EMAIL_VERIFICATION_REQUIRED") {
+      setErrorKey("auth.errors.emailVerificationRequired");
+      return;
+    }
+
+    navigate("/login/mfa");
   };
+
+  const firebaseConfigMissing = !isFirebaseConfigured();
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted px-4">
       <div className="w-full max-w-sm rounded-lg border bg-card p-6 shadow-sm sm:p-8">
-        <h1 className="mb-6 text-center text-2xl font-bold">{t("login.title")}</h1>
-        <form onSubmit={handleLogin} className="space-y-4">
-          <Input
-            type="email"
-            placeholder={t("login.username")}
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            autoComplete="username"
-            required
-          />
-          <Input
-            type="password"
-            placeholder={t("login.password")}
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            autoComplete="current-password"
-            required
-          />
-          {errorKey && (
+        <div className="mb-6 flex flex-col items-center gap-3 text-center">
+          <div className="rounded-full bg-primary/10 p-3 text-primary">
+            <ShieldCheck className="h-6 w-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">{t("login.title")}</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {t("login.googleDescription")}
+            </p>
+          </div>
+        </div>
+        <div className="space-y-4">
+          {firebaseConfigMissing ? (
+            <FormStatus
+              tone="error"
+              message={t("auth.errors.firebaseConfigMissing")}
+            />
+          ) : null}
+          {errorKey ? (
             <FormStatus
               tone="error"
               message={
-                errorKey === "auth.errors.locked"
-                  ? t(errorKey, { seconds: errorSeconds ?? 0 })
+                import.meta.env.DEV && errorMessage
+                  ? `${t(errorKey)} (${errorMessage})`
                   : t(errorKey)
               }
             />
-          )}
-          <Button type="submit" className="w-full">
-            {t("login.signIn")}
+          ) : null}
+          <Button
+            type="button"
+            className="h-11 w-full"
+            onClick={handleGoogleLogin}
+            disabled={isAuthenticating || firebaseConfigMissing}
+          >
+            {isAuthenticating ? t("common.loading") : t("login.googleSignIn")}
           </Button>
-        </form>
+        </div>
       </div>
     </div>
   );
