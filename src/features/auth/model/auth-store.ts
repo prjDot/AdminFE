@@ -122,6 +122,10 @@ function getErrorKey(error: unknown) {
     return "auth.errors.passkeyCredentialMissing";
   }
 
+  if (normalizedError instanceof Error && normalizedError.message === "ADMIN_ACCESS_TOKEN_MISSING") {
+    return "auth.errors.adminAccessTokenMissing";
+  }
+
   if (
     normalizedError instanceof TypeError &&
     normalizedError.message.includes("PublicKeyCredentialCreationOptions.pubKeyCredParams")
@@ -184,7 +188,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const session = await getAdminSessionState();
 
-      if (!session.authenticated || !session.admin || !session.stage) {
+      if (!session.admin || !session.stage) {
         clearStoredAdminSession();
         set({ bootstrapped: true, step: "NONE", admin: null });
         return;
@@ -267,6 +271,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isAuthenticating: true });
 
     try {
+      if (!readStoredAdminAccessToken()) {
+        throw new Error("ADMIN_ACCESS_TOKEN_MISSING");
+      }
+
       const options =
         step === "PASSKEY_ENROLL"
           ? await getPasskeyRegisterOptions()

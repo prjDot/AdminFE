@@ -456,7 +456,8 @@
       "passkeyCancelled": "패스키 인증이 취소되었거나 시간 초과되었습니다.",
       "passkeyAlreadyRegistered": "이미 등록된 패스키입니다. 다른 인증 수단을 선택하거나 다시 로그인해주세요.",
       "passkeyCredentialMissing": "브라우저에서 패스키 인증 정보를 받지 못했습니다.",
-      "passkeyOptionsInvalid": "패스키 등록 옵션 형식이 올바르지 않습니다. 서버의 WebAuthn options 응답을 확인해주세요."
+      "passkeyOptionsInvalid": "패스키 등록 옵션 형식이 올바르지 않습니다. 서버의 WebAuthn options 응답을 확인해주세요.",
+      "adminAccessTokenMissing": "관리자 임시 세션 토큰이 없습니다. Google 로그인부터 다시 진행해주세요."
     }
   }
 }
