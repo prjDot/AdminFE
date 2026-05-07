@@ -22,7 +22,7 @@ import {
   readStoredAdminAccessToken,
   saveStoredAdminSession,
 } from "@/shared/api/admin-session-storage";
-import { ApiResponseError } from "@/shared/api/api-response";
+import { ApiResponseError, toApiResponseError } from "@/shared/api/api-response";
 import { type Role } from "@/shared/config/constants";
 
 export interface AdminUser {
@@ -84,45 +84,47 @@ function persistSession(session: AdminAuthSessionResponse) {
 }
 
 function getErrorKey(error: unknown) {
-  if (error instanceof Error && error.message === "FIREBASE_CONFIG_MISSING") {
+  const normalizedError = toApiResponseError(error);
+
+  if (normalizedError instanceof Error && normalizedError.message === "FIREBASE_CONFIG_MISSING") {
     return "auth.errors.firebaseConfigMissing";
   }
 
-  if (error instanceof ApiResponseError) {
-    if (error.code === "PASSKEY_CHALLENGE_INVALID") {
+  if (normalizedError instanceof ApiResponseError) {
+    if (normalizedError.code === "PASSKEY_CHALLENGE_INVALID") {
       return "auth.errors.passkeyChallengeInvalid";
     }
 
-    if (error.code === "PASSKEY_INVALID") {
+    if (normalizedError.code === "PASSKEY_INVALID") {
       return "auth.errors.passkeyInvalid";
     }
 
-    if (error.code === "ADMIN_AUTH_STEP_INVALID") {
+    if (normalizedError.code === "ADMIN_AUTH_STEP_INVALID") {
       return "auth.errors.passkeyFlowInvalid";
     }
   }
 
-  if (error instanceof DOMException) {
-    if (error.name === "SecurityError") {
+  if (normalizedError instanceof DOMException) {
+    if (normalizedError.name === "SecurityError") {
       return "auth.errors.passkeyRpIdMismatch";
     }
 
-    if (error.name === "NotAllowedError") {
+    if (normalizedError.name === "NotAllowedError") {
       return "auth.errors.passkeyCancelled";
     }
 
-    if (error.name === "InvalidStateError") {
+    if (normalizedError.name === "InvalidStateError") {
       return "auth.errors.passkeyAlreadyRegistered";
     }
   }
 
-  if (error instanceof Error && error.message === "PASSKEY_CREDENTIAL_MISSING") {
+  if (normalizedError instanceof Error && normalizedError.message === "PASSKEY_CREDENTIAL_MISSING") {
     return "auth.errors.passkeyCredentialMissing";
   }
 
   if (
-    error instanceof TypeError &&
-    error.message.includes("PublicKeyCredentialCreationOptions.pubKeyCredParams")
+    normalizedError instanceof TypeError &&
+    normalizedError.message.includes("PublicKeyCredentialCreationOptions.pubKeyCredParams")
   ) {
     return "auth.errors.passkeyOptionsInvalid";
   }
@@ -131,22 +133,24 @@ function getErrorKey(error: unknown) {
 }
 
 function getErrorMessage(error: unknown) {
-  if (error instanceof ApiResponseError) {
+  const normalizedError = toApiResponseError(error);
+
+  if (normalizedError instanceof ApiResponseError) {
     return [
-      error.code ? `code=${error.code}` : null,
-      `status=${error.status}`,
-      error.requestId ? `requestId=${error.requestId}` : null,
-      error.message,
+      normalizedError.code ? `code=${normalizedError.code}` : null,
+      `status=${normalizedError.status}`,
+      normalizedError.requestId ? `requestId=${normalizedError.requestId}` : null,
+      normalizedError.message,
     ]
       .filter(Boolean)
       .join(" / ");
   }
 
-  if (error instanceof DOMException) {
-    return `${error.name}: ${error.message}`;
+  if (normalizedError instanceof DOMException) {
+    return `${normalizedError.name}: ${normalizedError.message}`;
   }
 
-  return error instanceof Error ? error.message : undefined;
+  return normalizedError instanceof Error ? normalizedError.message : undefined;
 }
 
 function logAuthError(context: string, error: unknown) {
@@ -254,7 +258,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   completePasskeyStep: async () => {
-    const { step, pendingPasskey } = get();
+    const { step } = get();
 
     if (step !== "PASSKEY_ENROLL" && step !== "MFA_PENDING") {
       return { ok: false, messageKey: "auth.errors.passkeyFlowInvalid" };
@@ -264,10 +268,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     try {
       const options =
-        pendingPasskey ??
-        (step === "PASSKEY_ENROLL"
+        step === "PASSKEY_ENROLL"
           ? await getPasskeyRegisterOptions()
-          : await getPasskeyMfaOptions());
+          : await getPasskeyMfaOptions();
       const credential =
         step === "PASSKEY_ENROLL"
           ? await createPasskeyCredential(options.publicKey)

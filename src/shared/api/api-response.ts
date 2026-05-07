@@ -43,3 +43,22 @@ export function unwrapApiResponse<T>(response: AxiosResponse<ApiResponse<T>>) {
 
   return payload.data;
 }
+
+export function toApiResponseError(error: unknown) {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "response" in error &&
+    typeof error.response === "object" &&
+    error.response !== null &&
+    "data" in error.response
+  ) {
+    const data = error.response.data as Partial<ApiResponse<unknown>>;
+
+    if (typeof data.ok === "boolean" && typeof data.status === "number") {
+      return new ApiResponseError(data as ApiResponse<unknown>);
+    }
+  }
+
+  return error;
+}
