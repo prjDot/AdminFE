@@ -327,7 +327,18 @@
     "mockBody": "This is the body of the notification that was sent out.",
     "targetLine": "Target: All Users",
     "delivered": "{{count}} Delivered",
+    "deliveredUsers": "{{count}} delivered",
+    "deliveredTokens": "{{count}} token successes",
     "failed": "{{count}} Failed",
+    "skipped": "{{count}} skipped",
+    "targetCount": "{{count}} targets",
+    "status": {
+      "sent": "Sent",
+      "partial": "Partial",
+      "skipped": "Skipped",
+      "failed": "Failed",
+      "pending": "Pending"
+    },
     "viewAll": "View all notifications"
   },
   "services": {

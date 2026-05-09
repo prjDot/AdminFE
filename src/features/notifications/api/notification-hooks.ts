@@ -16,8 +16,11 @@ export interface NotificationRecord {
   body: string;
   target: string;
   status: string;
+  targetCount?: number | null;
   deliveredCount: number;
+  deliveredUserCount?: number | null;
   failedCount: number;
+  skippedCount?: number | null;
   sentAt: string;
 }
 

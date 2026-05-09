@@ -21,7 +21,24 @@ export function formatNotificationDate(dateString: string) {
 
 export function getNotificationStatusBadge(status: string) {
   const normalized = status.toLowerCase();
-  if (["failed", "failure", "error"].includes(normalized)) return "destructive";
-  if (["sending", "pending"].includes(normalized)) return "secondary";
+  if (["failed", "failure", "error"].includes(normalized)) {
+    return "destructive";
+  }
+  if (["partial", "sending", "pending"].includes(normalized)) {
+    return "secondary";
+  }
   return "default";
+}
+
+export function getNotificationStatusLabelKey(status: string) {
+  const normalized = status.toLowerCase();
+  if (["sent", "success", "completed"].includes(normalized)) {
+    return "notifications.status.sent";
+  }
+  if (normalized === "partial") return "notifications.status.partial";
+  if (normalized === "skipped") return "notifications.status.skipped";
+  if (["failed", "failure", "error"].includes(normalized)) {
+    return "notifications.status.failed";
+  }
+  return "notifications.status.pending";
 }

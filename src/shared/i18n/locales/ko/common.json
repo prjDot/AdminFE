@@ -327,7 +327,18 @@
     "mockBody": "발송된 알림 본문 예시입니다.",
     "targetLine": "대상: 전체 사용자",
     "delivered": "{{count}}건 전달",
+    "deliveredUsers": "전달 {{count}}명",
+    "deliveredTokens": "토큰 기준 {{count}}건 성공",
     "failed": "{{count}}건 실패",
+    "skipped": "스킵 {{count}}건",
+    "targetCount": "대상 {{count}}명",
+    "status": {
+      "sent": "성공",
+      "partial": "부분 성공",
+      "skipped": "스킵",
+      "failed": "실패",
+      "pending": "대기"
+    },
     "viewAll": "전체 알림 보기"
   },
   "services": {

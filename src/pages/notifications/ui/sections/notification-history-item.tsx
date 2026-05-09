@@ -3,6 +3,7 @@ import type { NotificationRecord } from "@/features/notifications/api/notificati
 import {
   formatNotificationDate,
   getNotificationStatusBadge,
+  getNotificationStatusLabelKey,
 } from "@/pages/notifications/ui/sections/notification-history-utils";
 
 interface NotificationHistoryItemProps {
@@ -16,6 +17,10 @@ export function NotificationHistoryItem({
   getTargetLabel,
   t,
 }: NotificationHistoryItemProps) {
+  const deliveredUserCount = item.deliveredUserCount ?? item.deliveredCount ?? 0;
+  const skippedCount = item.skippedCount ?? 0;
+  const targetCount = item.targetCount ?? null;
+
   return (
     <div className="flex flex-col justify-between rounded-lg border p-4 transition-colors hover:bg-muted/50 sm:flex-row sm:items-center">
       <div>
@@ -27,20 +32,37 @@ export function NotificationHistoryItem({
       </div>
       <div className="mt-4 flex flex-col items-end sm:mt-0">
         <Badge variant={getNotificationStatusBadge(item.status)} className="mb-2">
-          {item.status}
+          {t(getNotificationStatusLabelKey(item.status))}
         </Badge>
-        <span className="text-sm text-muted-foreground">
-          {t("notifications.delivered", {
-            count: item.deliveredCount.toLocaleString(),
-          })}
-        </span>
-        {item.failedCount > 0 && (
-          <span className="text-xs text-destructive">
-            {t("notifications.failed", {
-              count: item.failedCount.toLocaleString(),
-            })}
-          </span>
-        )}
+        <div className="text-right text-sm text-muted-foreground">
+          <p>
+            {[
+              targetCount !== null
+                ? t("notifications.targetCount", {
+                    count: targetCount.toLocaleString(),
+                  })
+                : null,
+              t("notifications.deliveredUsers", {
+                count: deliveredUserCount.toLocaleString(),
+              }),
+              t("notifications.failed", {
+                count: item.failedCount.toLocaleString(),
+              }),
+              t("notifications.skipped", {
+                count: skippedCount.toLocaleString(),
+              }),
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+          {item.deliveredUserCount !== undefined && (
+            <p className="mt-1 text-xs">
+              {t("notifications.deliveredTokens", {
+                count: item.deliveredCount.toLocaleString(),
+              })}
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );
