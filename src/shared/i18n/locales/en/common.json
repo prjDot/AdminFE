@@ -457,7 +457,10 @@
       "passkeyAlreadyRegistered": "This passkey is already registered. Choose another authenticator or sign in again.",
       "passkeyCredentialMissing": "The browser did not return passkey credential data.",
       "passkeyOptionsInvalid": "The passkey registration options are invalid. Check the server WebAuthn options response.",
-      "adminAccessTokenMissing": "The temporary admin session token is missing. Start again from Google sign-in."
+      "adminAccessTokenMissing": "The temporary admin session token is missing. Start again from Google sign-in.",
+      "passkeyActionInProgress": "A passkey request is already in progress. Please wait.",
+      "passkeyChallengeStale": "The passkey challenge expired or was replaced. Try again.",
+      "passkeyOriginChanged": "The page origin changed during passkey registration. Restart on the same domain."
     }
   }
 }

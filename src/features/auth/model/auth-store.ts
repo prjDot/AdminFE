@@ -64,6 +64,27 @@ interface AuthState {
   forceLogout: () => void;
 }
 
+interface PasskeyAttemptContext {
+  id: string;
+  step: Extract<AuthStep, "PASSKEY_ENROLL" | "MFA_PENDING">;
+  challengeId: string;
+  optionsRequestedAt: string;
+  origin: string;
+}
+
+type PasskeyDebugEvent = {
+  event: string;
+  challengeId?: string;
+  optionsRequestedAt?: string;
+  verifyRequestedAt?: string;
+  origin?: string;
+  errorType?: string;
+  timestamp: string;
+};
+
+let activePasskeyAttempt: PasskeyAttemptContext | null = null;
+let passkeyActionInFlight = false;
+
 function toAdminUser(admin: AdminAuthSessionResponse["admin"]): AdminUser {
   return {
     id: admin.id,
@@ -81,6 +102,67 @@ function persistSession(session: AdminAuthSessionResponse) {
     admin: session.admin,
     permissions: session.permissions,
   });
+}
+
+function recordPasskeyDebug(event: Omit<PasskeyDebugEvent, "timestamp">) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const target = window as Window & { __ADMIN_PASSKEY_DEBUG__?: PasskeyDebugEvent[] };
+  target.__ADMIN_PASSKEY_DEBUG__ = target.__ADMIN_PASSKEY_DEBUG__ ?? [];
+  target.__ADMIN_PASSKEY_DEBUG__.push({
+    ...event,
+    timestamp: new Date().toISOString(),
+  });
+}
+
+function replacePasskeyAttempt(
+  step: Extract<AuthStep, "PASSKEY_ENROLL" | "MFA_PENDING">,
+  challengeId: string
+) {
+  const optionsRequestedAt = new Date().toISOString();
+  activePasskeyAttempt = {
+    id: crypto.randomUUID(),
+    step,
+    challengeId,
+    optionsRequestedAt,
+    origin: window.location.origin,
+  };
+
+  recordPasskeyDebug({
+    event: "options",
+    challengeId,
+    optionsRequestedAt,
+    origin: activePasskeyAttempt.origin,
+  });
+
+  return activePasskeyAttempt;
+}
+
+function discardPasskeyAttempt(event: string, error?: unknown) {
+  recordPasskeyDebug({
+    event,
+    challengeId: activePasskeyAttempt?.challengeId,
+    optionsRequestedAt: activePasskeyAttempt?.optionsRequestedAt,
+    origin: window.location.origin,
+    errorType: error instanceof Error ? error.name : undefined,
+  });
+  activePasskeyAttempt = null;
+}
+
+function assertPasskeyAttempt(attempt: PasskeyAttemptContext) {
+  if (
+    !activePasskeyAttempt ||
+    activePasskeyAttempt.id !== attempt.id ||
+    activePasskeyAttempt.challengeId !== attempt.challengeId
+  ) {
+    throw new Error("PASSKEY_CHALLENGE_CONTEXT_STALE");
+  }
+
+  if (attempt.origin !== window.location.origin) {
+    throw new Error("PASSKEY_ORIGIN_CHANGED");
+  }
 }
 
 function getErrorKey(error: unknown) {
@@ -124,6 +206,22 @@ function getErrorKey(error: unknown) {
 
   if (normalizedError instanceof Error && normalizedError.message === "ADMIN_ACCESS_TOKEN_MISSING") {
     return "auth.errors.adminAccessTokenMissing";
+  }
+
+  if (normalizedError instanceof Error && normalizedError.message === "PASSKEY_ACTION_IN_PROGRESS") {
+    return "auth.errors.passkeyActionInProgress";
+  }
+
+  if (normalizedError instanceof Error && normalizedError.message === "PASSKEY_CHALLENGE_CONTEXT_STALE") {
+    return "auth.errors.passkeyChallengeStale";
+  }
+
+  if (normalizedError instanceof Error && normalizedError.message === "PASSKEY_ORIGIN_CHANGED") {
+    return "auth.errors.passkeyOriginChanged";
+  }
+
+  if (normalizedError instanceof Error && normalizedError.message === "PASSKEY_CHALLENGE_ID_MISSING") {
+    return "auth.errors.passkeyOptionsInvalid";
   }
 
   if (
@@ -268,6 +366,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return { ok: false, messageKey: "auth.errors.passkeyFlowInvalid" };
     }
 
+    if (passkeyActionInFlight || get().isAuthenticating) {
+      return { ok: false, messageKey: "auth.errors.passkeyActionInProgress" };
+    }
+
+    passkeyActionInFlight = true;
+    activePasskeyAttempt = null;
     set({ isAuthenticating: true });
 
     try {
@@ -279,15 +383,30 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         step === "PASSKEY_ENROLL"
           ? await getPasskeyRegisterOptions()
           : await getPasskeyMfaOptions();
+      if (!options.challengeId) {
+        throw new Error("PASSKEY_CHALLENGE_ID_MISSING");
+      }
+
+      const attempt = replacePasskeyAttempt(step, options.challengeId);
       const credential =
         step === "PASSKEY_ENROLL"
           ? await createPasskeyCredential(options.publicKey)
           : await getPasskeyCredential(options.publicKey);
+      assertPasskeyAttempt(attempt);
+      recordPasskeyDebug({
+        event: "verify",
+        challengeId: attempt.challengeId,
+        optionsRequestedAt: attempt.optionsRequestedAt,
+        verifyRequestedAt: new Date().toISOString(),
+        origin: window.location.origin,
+      });
       const session =
         step === "PASSKEY_ENROLL"
-          ? await verifyPasskeyRegistration(options.challengeId, credential)
-          : await verifyPasskeyMfa(options.challengeId, credential);
+          ? await verifyPasskeyRegistration(attempt.challengeId, credential)
+          : await verifyPasskeyMfa(attempt.challengeId, credential);
 
+      activePasskeyAttempt = null;
+      passkeyActionInFlight = false;
       persistSession(session);
       set({
         step: "AUTHENTICATED",
@@ -307,6 +426,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return { ok: true, nextStep: "AUTHENTICATED" };
     } catch (error) {
       logAuthError("passkey-step", error);
+      discardPasskeyAttempt("discard", error);
+      passkeyActionInFlight = false;
       set({ isAuthenticating: false, pendingPasskey: null });
       return {
         ok: false,

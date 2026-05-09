@@ -121,6 +121,7 @@ export async function createPasskeyCredential(
     id: credential.id,
     rawId: bufferToBase64Url(credential.rawId),
     type: credential.type,
+    clientExtensionResults: credential.getClientExtensionResults(),
     response: {
       clientDataJSON: bufferToBase64Url(response.clientDataJSON),
       attestationObject: bufferToBase64Url(response.attestationObject),
@@ -145,6 +146,7 @@ export async function getPasskeyCredential(
     id: credential.id,
     rawId: bufferToBase64Url(credential.rawId),
     type: credential.type,
+    clientExtensionResults: credential.getClientExtensionResults(),
     response: {
       clientDataJSON: bufferToBase64Url(response.clientDataJSON),
       authenticatorData: bufferToBase64Url(response.authenticatorData),
