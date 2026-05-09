@@ -75,6 +75,7 @@ interface PasskeyAttemptContext {
   id: string;
   step: Extract<AuthStep, "PASSKEY_ENROLL" | "MFA_PENDING">;
   challengeId: string;
+  publicKey: AdminPasskeyOptionsResponse["publicKey"];
   optionsRequestedAt: string;
   origin: string;
 }
@@ -94,6 +95,9 @@ type PasskeyDebugEvent = {
   errorType?: string;
   timestamp: string;
 };
+
+const PASSKEY_ACTION_LOCK_STORAGE_KEY = "paw-admin-passkey-action-lock";
+const PASSKEY_ACTION_LOCK_TTL_MS = 2 * 60 * 1000;
 
 let activePasskeyAttempt: PasskeyAttemptContext | null = null;
 let passkeyActionInFlight = false;
@@ -184,15 +188,81 @@ function getCredentialClientDataDebug(credential: unknown) {
   }
 }
 
+function readPasskeyActionLock() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const raw = window.localStorage.getItem(PASSKEY_ACTION_LOCK_STORAGE_KEY);
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const lock = JSON.parse(raw) as { ownerId?: unknown; expiresAt?: unknown };
+    if (
+      typeof lock.ownerId !== "string" ||
+      typeof lock.expiresAt !== "number"
+    ) {
+      return null;
+    }
+
+    if (lock.expiresAt <= Date.now()) {
+      window.localStorage.removeItem(PASSKEY_ACTION_LOCK_STORAGE_KEY);
+      return null;
+    }
+
+    return lock as { ownerId: string; expiresAt: number };
+  } catch {
+    window.localStorage.removeItem(PASSKEY_ACTION_LOCK_STORAGE_KEY);
+    return null;
+  }
+}
+
+function acquirePasskeyActionLock() {
+  if (passkeyActionInFlight || readPasskeyActionLock()) {
+    return null;
+  }
+
+  const ownerId = crypto.randomUUID();
+  passkeyActionInFlight = true;
+
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(
+      PASSKEY_ACTION_LOCK_STORAGE_KEY,
+      JSON.stringify({
+        ownerId,
+        expiresAt: Date.now() + PASSKEY_ACTION_LOCK_TTL_MS,
+      }),
+    );
+  }
+
+  return ownerId;
+}
+
+function releasePasskeyActionLock(ownerId: string | null) {
+  passkeyActionInFlight = false;
+
+  if (typeof window === "undefined" || !ownerId) {
+    return;
+  }
+
+  const lock = readPasskeyActionLock();
+  if (!lock || lock.ownerId === ownerId) {
+    window.localStorage.removeItem(PASSKEY_ACTION_LOCK_STORAGE_KEY);
+  }
+}
+
 function replacePasskeyAttempt(
   step: Extract<AuthStep, "PASSKEY_ENROLL" | "MFA_PENDING">,
-  challengeId: string,
+  options: AdminPasskeyOptionsResponse,
 ) {
   const optionsRequestedAt = new Date().toISOString();
   activePasskeyAttempt = {
     id: crypto.randomUUID(),
     step,
-    challengeId,
+    challengeId: options.challengeId,
+    publicKey: options.publicKey,
     optionsRequestedAt,
     origin: window.location.origin,
   };
@@ -200,7 +270,7 @@ function replacePasskeyAttempt(
   recordPasskeyDebug({
     event: "options",
     stage: step,
-    challengeId,
+    challengeId: activePasskeyAttempt.challengeId,
     optionsRequestedAt,
     origin: activePasskeyAttempt.origin,
   });
@@ -498,11 +568,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return { ok: false, messageKey: "auth.errors.passkeyFlowInvalid" };
     }
 
-    if (passkeyActionInFlight || get().isAuthenticating) {
+    if (get().isAuthenticating) {
       return { ok: false, messageKey: "auth.errors.passkeyActionInProgress" };
     }
 
-    passkeyActionInFlight = true;
+    const lockOwnerId = acquirePasskeyActionLock();
+    if (!lockOwnerId) {
+      return { ok: false, messageKey: "auth.errors.passkeyActionInProgress" };
+    }
+
     activePasskeyAttempt = null;
     set({ isAuthenticating: true });
 
@@ -521,16 +595,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const options =
         step === "PASSKEY_ENROLL"
           ? await getPasskeyRegisterOptions()
-          : await getPasskeyMfaOptions();
+          : (get().pendingPasskey ?? (await getPasskeyMfaOptions()));
       if (!options.challengeId) {
         throw new Error("PASSKEY_CHALLENGE_ID_MISSING");
       }
 
-      const attempt = replacePasskeyAttempt(step, options.challengeId);
+      const attempt = replacePasskeyAttempt(step, options);
       const credential =
         step === "PASSKEY_ENROLL"
-          ? await createPasskeyCredential(options.publicKey)
-          : await getPasskeyCredential(options.publicKey);
+          ? await createPasskeyCredential(attempt.publicKey)
+          : await getPasskeyCredential(attempt.publicKey);
       assertPasskeyAttempt(attempt);
       recordPasskeyDebug({
         event: "verify",
@@ -547,7 +621,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           : await verifyPasskeyMfa(attempt.challengeId, credential);
 
       activePasskeyAttempt = null;
-      passkeyActionInFlight = false;
+      releasePasskeyActionLock(lockOwnerId);
       persistSession(session);
       set({
         step: "AUTHENTICATED",
@@ -568,7 +642,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (error) {
       logAuthError("passkey-step", error);
       discardPasskeyAttempt("discard", error);
-      passkeyActionInFlight = false;
+      releasePasskeyActionLock(lockOwnerId);
       set({ isAuthenticating: false, pendingPasskey: null });
       return {
         ok: false,
