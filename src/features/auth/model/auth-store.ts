@@ -12,7 +12,10 @@ import {
   verifyPasskeyMfa,
   verifyPasskeyRegistration,
 } from "@/features/auth/api/admin-auth-api";
-import { getGoogleFirebaseIdToken, signOutFirebase } from "@/features/auth/api/firebase-auth";
+import {
+  getGoogleFirebaseIdToken,
+  signOutFirebase,
+} from "@/features/auth/api/firebase-auth";
 import {
   createPasskeyCredential,
   getPasskeyCredential,
@@ -20,9 +23,13 @@ import {
 import {
   clearStoredAdminSession,
   readStoredAdminAccessToken,
+  readStoredAdminSession,
   saveStoredAdminSession,
 } from "@/shared/api/admin-session-storage";
-import { ApiResponseError, toApiResponseError } from "@/shared/api/api-response";
+import {
+  ApiResponseError,
+  toApiResponseError,
+} from "@/shared/api/api-response";
 import { type Role } from "@/shared/config/constants";
 
 export interface AdminUser {
@@ -74,10 +81,16 @@ interface PasskeyAttemptContext {
 
 type PasskeyDebugEvent = {
   event: string;
+  stage?: Extract<AuthStep, "PASSKEY_ENROLL" | "MFA_PENDING">;
   challengeId?: string;
   optionsRequestedAt?: string;
   verifyRequestedAt?: string;
   origin?: string;
+  clientDataOrigin?: string;
+  clientDataType?: string;
+  apiStatus?: number;
+  apiCode?: string;
+  apiMessage?: string;
   errorType?: string;
   timestamp: string;
 };
@@ -95,8 +108,10 @@ function toAdminUser(admin: AdminAuthSessionResponse["admin"]): AdminUser {
 }
 
 function persistSession(session: AdminAuthSessionResponse) {
+  const token = session.accessToken ?? readStoredAdminAccessToken();
+
   saveStoredAdminSession({
-    token: session.accessToken,
+    token,
     expiresAt: session.expiresAt,
     stage: session.stage,
     admin: session.admin,
@@ -109,7 +124,9 @@ function recordPasskeyDebug(event: Omit<PasskeyDebugEvent, "timestamp">) {
     return;
   }
 
-  const target = window as Window & { __ADMIN_PASSKEY_DEBUG__?: PasskeyDebugEvent[] };
+  const target = window as Window & {
+    __ADMIN_PASSKEY_DEBUG__?: PasskeyDebugEvent[];
+  };
   target.__ADMIN_PASSKEY_DEBUG__ = target.__ADMIN_PASSKEY_DEBUG__ ?? [];
   target.__ADMIN_PASSKEY_DEBUG__.push({
     ...event,
@@ -117,9 +134,59 @@ function recordPasskeyDebug(event: Omit<PasskeyDebugEvent, "timestamp">) {
   });
 }
 
+function getApiErrorDebug(error: unknown) {
+  const normalizedError = toApiResponseError(error);
+
+  if (!(normalizedError instanceof ApiResponseError)) {
+    return {};
+  }
+
+  return {
+    apiStatus: normalizedError.status,
+    apiCode: normalizedError.code,
+    apiMessage: normalizedError.message,
+  };
+}
+
+function decodeBase64Url(value: string) {
+  const base64 = value.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, "=");
+  return window.atob(padded);
+}
+
+function getCredentialClientDataDebug(credential: unknown) {
+  if (
+    typeof window === "undefined" ||
+    typeof credential !== "object" ||
+    credential === null ||
+    !("response" in credential) ||
+    typeof credential.response !== "object" ||
+    credential.response === null ||
+    !("clientDataJSON" in credential.response) ||
+    typeof credential.response.clientDataJSON !== "string"
+  ) {
+    return {};
+  }
+
+  try {
+    const clientData = JSON.parse(
+      decodeBase64Url(credential.response.clientDataJSON),
+    ) as { origin?: unknown; type?: unknown };
+
+    return {
+      clientDataOrigin:
+        typeof clientData.origin === "string" ? clientData.origin : undefined,
+      clientDataType:
+        typeof clientData.type === "string" ? clientData.type : undefined,
+    };
+  } catch {
+    return {};
+  }
+}
+
 function replacePasskeyAttempt(
   step: Extract<AuthStep, "PASSKEY_ENROLL" | "MFA_PENDING">,
-  challengeId: string
+  challengeId: string,
 ) {
   const optionsRequestedAt = new Date().toISOString();
   activePasskeyAttempt = {
@@ -132,6 +199,7 @@ function replacePasskeyAttempt(
 
   recordPasskeyDebug({
     event: "options",
+    stage: step,
     challengeId,
     optionsRequestedAt,
     origin: activePasskeyAttempt.origin,
@@ -143,10 +211,12 @@ function replacePasskeyAttempt(
 function discardPasskeyAttempt(event: string, error?: unknown) {
   recordPasskeyDebug({
     event,
+    stage: activePasskeyAttempt?.step,
     challengeId: activePasskeyAttempt?.challengeId,
     optionsRequestedAt: activePasskeyAttempt?.optionsRequestedAt,
     origin: window.location.origin,
     errorType: error instanceof Error ? error.name : undefined,
+    ...getApiErrorDebug(error),
   });
   activePasskeyAttempt = null;
 }
@@ -168,11 +238,28 @@ function assertPasskeyAttempt(attempt: PasskeyAttemptContext) {
 function getErrorKey(error: unknown) {
   const normalizedError = toApiResponseError(error);
 
-  if (normalizedError instanceof Error && normalizedError.message === "FIREBASE_CONFIG_MISSING") {
+  if (
+    normalizedError instanceof Error &&
+    normalizedError.message === "FIREBASE_CONFIG_MISSING"
+  ) {
     return "auth.errors.firebaseConfigMissing";
   }
 
   if (normalizedError instanceof ApiResponseError) {
+    if (
+      normalizedError.code === "ADMIN_SESSION_REQUIRED" ||
+      normalizedError.code === "UNAUTHORIZED"
+    ) {
+      return "auth.errors.adminAccessTokenMissing";
+    }
+
+    if (
+      normalizedError.code === "ADMIN_ONLY" ||
+      normalizedError.code === "GOOGLE_SIGN_IN_REQUIRED"
+    ) {
+      return "auth.errors.adminForbidden";
+    }
+
     if (normalizedError.code === "PASSKEY_CHALLENGE_INVALID") {
       return "auth.errors.passkeyChallengeInvalid";
     }
@@ -200,33 +287,74 @@ function getErrorKey(error: unknown) {
     }
   }
 
-  if (normalizedError instanceof Error && normalizedError.message === "PASSKEY_CREDENTIAL_MISSING") {
+  if (
+    normalizedError instanceof Error &&
+    normalizedError.message === "PASSKEY_CREDENTIAL_MISSING"
+  ) {
     return "auth.errors.passkeyCredentialMissing";
   }
 
-  if (normalizedError instanceof Error && normalizedError.message === "ADMIN_ACCESS_TOKEN_MISSING") {
+  if (
+    normalizedError instanceof Error &&
+    normalizedError.message === "ADMIN_ACCESS_TOKEN_MISSING"
+  ) {
     return "auth.errors.adminAccessTokenMissing";
   }
 
-  if (normalizedError instanceof Error && normalizedError.message === "PASSKEY_ACTION_IN_PROGRESS") {
+  if (
+    normalizedError instanceof Error &&
+    normalizedError.message === "PASSKEY_ACTION_IN_PROGRESS"
+  ) {
     return "auth.errors.passkeyActionInProgress";
   }
 
-  if (normalizedError instanceof Error && normalizedError.message === "PASSKEY_CHALLENGE_CONTEXT_STALE") {
+  if (
+    normalizedError instanceof Error &&
+    normalizedError.message === "PASSKEY_CHALLENGE_CONTEXT_STALE"
+  ) {
     return "auth.errors.passkeyChallengeStale";
   }
 
-  if (normalizedError instanceof Error && normalizedError.message === "PASSKEY_ORIGIN_CHANGED") {
+  if (
+    normalizedError instanceof Error &&
+    normalizedError.message === "PASSKEY_ORIGIN_CHANGED"
+  ) {
     return "auth.errors.passkeyOriginChanged";
   }
 
-  if (normalizedError instanceof Error && normalizedError.message === "PASSKEY_CHALLENGE_ID_MISSING") {
+  if (
+    normalizedError instanceof Error &&
+    normalizedError.message === "PASSKEY_CHALLENGE_ID_MISSING"
+  ) {
     return "auth.errors.passkeyOptionsInvalid";
   }
 
   if (
+    normalizedError instanceof Error &&
+    normalizedError.message === "PASSKEY_OPTIONS_INVALID"
+  ) {
+    return "auth.errors.passkeyOptionsInvalid";
+  }
+
+  if (
+    normalizedError instanceof Error &&
+    normalizedError.message === "PASSKEY_NOT_SUPPORTED"
+  ) {
+    return "auth.errors.passkeyNotSupported";
+  }
+
+  if (
+    normalizedError instanceof Error &&
+    normalizedError.message === "PASSKEY_SECURE_CONTEXT_REQUIRED"
+  ) {
+    return "auth.errors.passkeySecureContextRequired";
+  }
+
+  if (
     normalizedError instanceof TypeError &&
-    normalizedError.message.includes("PublicKeyCredentialCreationOptions.pubKeyCredParams")
+    normalizedError.message.includes(
+      "PublicKeyCredentialCreationOptions.pubKeyCredParams",
+    )
   ) {
     return "auth.errors.passkeyOptionsInvalid";
   }
@@ -241,7 +369,9 @@ function getErrorMessage(error: unknown) {
     return [
       normalizedError.code ? `code=${normalizedError.code}` : null,
       `status=${normalizedError.status}`,
-      normalizedError.requestId ? `requestId=${normalizedError.requestId}` : null,
+      normalizedError.requestId
+        ? `requestId=${normalizedError.requestId}`
+        : null,
       normalizedError.message,
     ]
       .filter(Boolean)
@@ -257,7 +387,9 @@ function getErrorMessage(error: unknown) {
 
 function logAuthError(context: string, error: unknown) {
   if (import.meta.env.DEV && typeof reportError === "function") {
-    reportError(error instanceof Error ? error : new Error(`[admin-auth] ${context}`));
+    reportError(
+      error instanceof Error ? error : new Error(`[admin-auth] ${context}`),
+    );
   }
 }
 
@@ -375,9 +507,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isAuthenticating: true });
 
     try {
-      if (!readStoredAdminAccessToken()) {
+      const storedSession = readStoredAdminSession();
+      if (!storedSession?.token) {
         throw new Error("ADMIN_ACCESS_TOKEN_MISSING");
       }
+
+      recordPasskeyDebug({
+        event: "start",
+        stage: step,
+        origin: window.location.origin,
+      });
 
       const options =
         step === "PASSKEY_ENROLL"
@@ -395,10 +534,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       assertPasskeyAttempt(attempt);
       recordPasskeyDebug({
         event: "verify",
+        stage: step,
         challengeId: attempt.challengeId,
         optionsRequestedAt: attempt.optionsRequestedAt,
         verifyRequestedAt: new Date().toISOString(),
         origin: window.location.origin,
+        ...getCredentialClientDataDebug(credential),
       });
       const session =
         step === "PASSKEY_ENROLL"

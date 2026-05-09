@@ -5,6 +5,10 @@ import type {
 import { readStoredAdminSession } from "@/shared/api/admin-session-storage";
 
 function base64UrlToBuffer(value: string) {
+  if (!value) {
+    throw new Error("PASSKEY_OPTIONS_INVALID");
+  }
+
   const base64 = value.replace(/-/g, "+").replace(/_/g, "/");
   const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, "=");
   const binary = window.atob(padded);
@@ -36,6 +40,23 @@ function textToBuffer(value: string) {
   return new TextEncoder().encode(value).buffer;
 }
 
+function assertWebAuthnAvailable() {
+  if (
+    typeof window === "undefined" ||
+    typeof navigator === "undefined" ||
+    !window.PublicKeyCredential ||
+    !navigator.credentials
+  ) {
+    throw new Error("PASSKEY_NOT_SUPPORTED");
+  }
+
+  const isSecureOrigin =
+    window.isSecureContext || window.location.hostname === "localhost";
+  if (!isSecureOrigin) {
+    throw new Error("PASSKEY_SECURE_CONTEXT_REQUIRED");
+  }
+}
+
 function getRp(publicKey: PublicKeyCredentialCreationOptionsJSON) {
   const rp = publicKey.rp;
 
@@ -47,7 +68,10 @@ function getRp(publicKey: PublicKeyCredentialCreationOptionsJSON) {
   }
 
   return {
-    id: typeof publicKey.rpId === "string" ? publicKey.rpId : window.location.hostname,
+    id:
+      typeof publicKey.rpId === "string"
+        ? publicKey.rpId
+        : window.location.hostname,
     name: "PawGen Admin",
   };
 }
@@ -67,7 +91,7 @@ function getUser(publicKey: PublicKeyCredentialCreationOptionsJSON) {
 }
 
 function toCredentialCreationOptions(
-  publicKey: PublicKeyCredentialCreationOptionsJSON
+  publicKey: PublicKeyCredentialCreationOptionsJSON,
 ): PublicKeyCredentialCreationOptions {
   const pubKeyCredParams = Array.isArray(publicKey.pubKeyCredParams)
     ? publicKey.pubKeyCredParams
@@ -91,7 +115,7 @@ function toCredentialCreationOptions(
 }
 
 function toCredentialRequestOptions(
-  publicKey: PublicKeyCredentialRequestOptionsJSON
+  publicKey: PublicKeyCredentialRequestOptionsJSON,
 ): PublicKeyCredentialRequestOptions {
   return {
     ...publicKey,
@@ -105,8 +129,10 @@ function toCredentialRequestOptions(
 }
 
 export async function createPasskeyCredential(
-  publicKey: PublicKeyCredentialCreationOptionsJSON
+  publicKey: PublicKeyCredentialCreationOptionsJSON,
 ) {
+  assertWebAuthnAvailable();
+
   const credential = await navigator.credentials.create({
     publicKey: toCredentialCreationOptions(publicKey),
   });
@@ -121,17 +147,21 @@ export async function createPasskeyCredential(
     id: credential.id,
     rawId: bufferToBase64Url(credential.rawId),
     type: credential.type,
+    authenticatorAttachment: credential.authenticatorAttachment,
     clientExtensionResults: credential.getClientExtensionResults(),
     response: {
       clientDataJSON: bufferToBase64Url(response.clientDataJSON),
       attestationObject: bufferToBase64Url(response.attestationObject),
+      transports: response.getTransports?.() ?? [],
     },
   };
 }
 
 export async function getPasskeyCredential(
-  publicKey: PublicKeyCredentialRequestOptionsJSON
+  publicKey: PublicKeyCredentialRequestOptionsJSON,
 ) {
+  assertWebAuthnAvailable();
+
   const credential = await navigator.credentials.get({
     publicKey: toCredentialRequestOptions(publicKey),
   });
@@ -146,6 +176,7 @@ export async function getPasskeyCredential(
     id: credential.id,
     rawId: bufferToBase64Url(credential.rawId),
     type: credential.type,
+    authenticatorAttachment: credential.authenticatorAttachment,
     clientExtensionResults: credential.getClientExtensionResults(),
     response: {
       clientDataJSON: bufferToBase64Url(response.clientDataJSON),

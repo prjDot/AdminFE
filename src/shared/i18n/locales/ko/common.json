@@ -457,7 +457,10 @@
       "passkeyAlreadyRegistered": "이미 등록된 패스키입니다. 다른 인증 수단을 선택하거나 다시 로그인해주세요.",
       "passkeyCredentialMissing": "브라우저에서 패스키 인증 정보를 받지 못했습니다.",
       "passkeyOptionsInvalid": "패스키 등록 옵션 형식이 올바르지 않습니다. 서버의 WebAuthn options 응답을 확인해주세요.",
+      "passkeyNotSupported": "현재 브라우저 또는 환경에서 패스키를 사용할 수 없습니다.",
+      "passkeySecureContextRequired": "패스키는 HTTPS 또는 localhost 보안 환경에서만 사용할 수 있습니다.",
       "adminAccessTokenMissing": "관리자 임시 세션 토큰이 없습니다. Google 로그인부터 다시 진행해주세요.",
+      "adminForbidden": "이 Google 계정은 관리자 콘솔 접근 권한이 없습니다.",
       "passkeyActionInProgress": "패스키 요청을 처리 중입니다. 잠시 기다려주세요.",
       "passkeyChallengeStale": "패스키 요청이 만료되었거나 다른 요청으로 교체되었습니다. 다시 시도해주세요.",
       "passkeyOriginChanged": "패스키 등록 중 접속 도메인이 변경되었습니다. 같은 도메인에서 다시 시작해주세요."
