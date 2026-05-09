@@ -355,6 +355,8 @@ export function UsersTableSection() {
               columns={columns}
               data={items}
               onRowClick={openUserProfile}
+              showExport={false}
+              showPagination={false}
             />
           ) : (
             <UsersGrid

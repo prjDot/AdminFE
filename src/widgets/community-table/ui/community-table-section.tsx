@@ -305,7 +305,13 @@ export function CommunityTableSection() {
           {t("common.error.fetch", "데이터를 불러오지 못했습니다.")}
         </div>
       ) : viewMode === "list" ? (
-        <DataTable columns={columns} data={items} onRowClick={openPost} />
+        <DataTable
+          columns={columns}
+          data={items}
+          onRowClick={openPost}
+          showExport={false}
+          showPagination={false}
+        />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {items.map((post) => (

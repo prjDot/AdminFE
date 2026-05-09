@@ -326,7 +326,8 @@
     "mockBody": "This is the body of the notification that was sent out.",
     "targetLine": "Target: All Users",
     "delivered": "{{count}} Delivered",
-    "failed": "{{count}} Failed"
+    "failed": "{{count}} Failed",
+    "viewAll": "View all notifications"
   },
   "services": {
     "title": "Server Status Monitoring",
@@ -385,11 +386,14 @@
     },
     "actions": {
       "reboot": "Reboot Process",
-      "viewLogs": "View Logs"
+      "viewLogs": "View Logs",
+      "recheck": "Recheck Integration",
+      "runCheck": "Run Check"
     },
     "feedback": {
       "manualOverrideApplied": "Global status was manually updated.",
-      "rebootRequested": "Instance reboot requested."
+      "rebootRequested": "Instance reboot requested.",
+      "recheckRequested": "Integration recheck requested."
     },
     "recentIncidents": "Recent Incidents"
   },

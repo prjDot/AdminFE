@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useForm } from "react-hook-form";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
-import { useSendNotification } from "@/pages/notifications/api/notification-hooks";
+import { useSendNotification } from "@/features/notifications/api/notification-hooks";
 import {
   ApiResponseError,
   toApiResponseError,

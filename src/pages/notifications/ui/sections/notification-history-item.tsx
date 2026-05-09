@@ -1,5 +1,5 @@
 import { Badge } from "@/shared/ui/badge";
-import type { NotificationRecord } from "@/pages/notifications/api/notification-hooks";
+import type { NotificationRecord } from "@/features/notifications/api/notification-hooks";
 import {
   formatNotificationDate,
   getNotificationStatusBadge,

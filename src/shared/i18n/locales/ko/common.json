@@ -326,7 +326,8 @@
     "mockBody": "발송된 알림 본문 예시입니다.",
     "targetLine": "대상: 전체 사용자",
     "delivered": "{{count}}건 전달",
-    "failed": "{{count}}건 실패"
+    "failed": "{{count}}건 실패",
+    "viewAll": "전체 알림 보기"
   },
   "services": {
     "title": "서버 상태 모니터링",
@@ -385,11 +386,14 @@
     },
     "actions": {
       "reboot": "프로세스 재시작",
-      "viewLogs": "로그 보기"
+      "viewLogs": "로그 보기",
+      "recheck": "연동 재점검",
+      "runCheck": "재점검 실행"
     },
     "feedback": {
       "manualOverrideApplied": "전체 상태를 수동 변경했습니다.",
-      "rebootRequested": "인스턴스 재시작을 요청했습니다."
+      "rebootRequested": "인스턴스 재시작을 요청했습니다.",
+      "recheckRequested": "연동 재점검을 요청했습니다."
     },
     "recentIncidents": "최근 장애 이력"
   },

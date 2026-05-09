@@ -29,13 +29,17 @@ interface DataTableProps<TData, TValue> {
   data: TData[];
   filename?: string;
   onRowClick?: (row: TData) => void;
+  showExport?: boolean;
+  showPagination?: boolean;
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
   filename = "export.csv",
-  onRowClick
+  onRowClick,
+  showExport = true,
+  showPagination = true,
 }: DataTableProps<TData, TValue>) {
   const { t } = useTranslation();
 
@@ -75,12 +79,14 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end pr-2">
-        <Button variant="outline" size="sm" onClick={handleExportCSV}>
-          <Download className="mr-2 h-4 w-4" />
-          Export CSV
-        </Button>
-      </div>
+      {showExport && (
+        <div className="flex justify-end pr-2">
+          <Button variant="outline" size="sm" onClick={handleExportCSV}>
+            <Download className="mr-2 h-4 w-4" />
+            {t("common.actions.export")}
+          </Button>
+        </div>
+      )}
       <div className="rounded-md border bg-card">
         <Table>
           <TableHeader>
@@ -130,9 +136,12 @@ export function DataTable<TData, TValue>({
           </TableBody>
         </Table>
       </div>
+      {showPagination && (
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between px-2 py-4">
         <div className="flex items-center space-x-2">
-          <p className="text-sm font-medium text-muted-foreground">Rows per page</p>
+          <p className="text-sm font-medium text-muted-foreground">
+            {t("table.rowsPerPage", "페이지당 행")}
+          </p>
           <Select
             value={`${table.getState().pagination.pageSize}`}
             onValueChange={(value) => {
@@ -153,7 +162,7 @@ export function DataTable<TData, TValue>({
         </div>
         <div className="flex items-center space-x-2">
           <span className="text-sm text-muted-foreground mr-4">
-            Page {table.getState().pagination.pageIndex + 1} of{" "}
+            {t("table.page", "페이지")} {table.getState().pagination.pageIndex + 1} /{" "}
             {table.getPageCount() || 1}
           </span>
           <Button
@@ -174,6 +183,7 @@ export function DataTable<TData, TValue>({
           </Button>
         </div>
       </div>
+      )}
     </div>
   );
 }

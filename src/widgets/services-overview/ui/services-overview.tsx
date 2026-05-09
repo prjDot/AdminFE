@@ -38,6 +38,7 @@ import {
 } from "@/shared/ui/sheet";
 import {
   useRebootService,
+  useRefreshIntegration,
   useServiceLogs,
   useServicesOverview,
 } from "@/features/services/api/services-hooks";
@@ -67,6 +68,12 @@ const statusContainerClass: Record<StatusVariant, string> = {
   maintenance: "bg-secondary/20 text-secondary-foreground",
 };
 
+const INTEGRATION_KEYS = new Set(["DATABASE", "REDIS", "FIREBASE", "SHELTER_API"]);
+
+function isIntegrationKey(key: string) {
+  return INTEGRATION_KEYS.has(key.toUpperCase());
+}
+
 export function ServicesOverview() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -77,6 +84,7 @@ export function ServicesOverview() {
     refetch,
   } = useServicesOverview();
   const rebootMutation = useRebootService();
+  const refreshIntegrationMutation = useRefreshIntegration();
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(
     null,
   );
@@ -92,16 +100,27 @@ export function ServicesOverview() {
   const SelectedIcon = selectedMeta?.icon ?? Server;
   const globalStatus = deriveGlobalStatus(services);
 
-  const handleReboot = (targetId: string) => {
+  const handleServiceAction = (targetId: string) => {
     if (!targetId) return;
-    rebootMutation.mutate(targetId, {
+    const integrationKey = targetId.toUpperCase();
+    const isIntegration = isIntegrationKey(targetId);
+    const mutation = isIntegration
+      ? refreshIntegrationMutation
+      : rebootMutation;
+
+    mutation.mutate(isIntegration ? integrationKey : targetId, {
       onSuccess: () => {
-        toast.success(t("services.feedback.rebootRequested"));
+        toast.success(
+          isIntegration
+            ? t("services.feedback.recheckRequested")
+            : t("services.feedback.rebootRequested"),
+        );
         void queryClient.invalidateQueries({
           queryKey: queryKeys.services.overview(),
         });
       },
-      onError: () => toast.error(t("common.errors.unknown")),
+      onError: (error) =>
+        toast.error(error instanceof Error ? error.message : t("common.errors.unknown")),
     });
   };
 
@@ -194,13 +213,17 @@ export function ServicesOverview() {
             <DialogFooter>
               <Button
                 onClick={() =>
-                  handleReboot(selectedServiceId ?? services[0]?.id ?? "")
+                  handleServiceAction(selectedServiceId ?? services[0]?.id ?? "")
                 }
-                disabled={rebootMutation.isPending || !selectedServiceId}
+                disabled={
+                  rebootMutation.isPending ||
+                  refreshIntegrationMutation.isPending ||
+                  !selectedServiceId
+                }
               >
-                {rebootMutation.isPending
+                {rebootMutation.isPending || refreshIntegrationMutation.isPending
                   ? t("common.loading")
-                  : t("services.actions.reboot")}
+                  : t("services.actions.runCheck")}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -365,10 +388,15 @@ export function ServicesOverview() {
               <div className="flex justify-end gap-3">
                 <Button
                   variant="outline"
-                  onClick={() => handleReboot(selectedService.id)}
-                  disabled={rebootMutation.isPending}
+                  onClick={() => handleServiceAction(selectedService.id)}
+                  disabled={
+                    rebootMutation.isPending ||
+                    refreshIntegrationMutation.isPending
+                  }
                 >
-                  {t("services.actions.reboot")}
+                  {isIntegrationKey(selectedService.id)
+                    ? t("services.actions.recheck")
+                    : t("services.actions.reboot")}
                 </Button>
               </div>
             </div>

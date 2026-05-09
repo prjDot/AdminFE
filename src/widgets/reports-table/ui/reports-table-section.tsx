@@ -174,6 +174,8 @@ export function ReportsTableSection() {
               columns={columns}
               data={items}
               onRowClick={openReportDetail}
+              showExport={false}
+              showPagination={false}
             />
           ) : (
             <ReportsGrid items={items} onViewDetail={openReportDetail} />

@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { format } from "date-fns"
+import { ko } from "date-fns/locale"
 import { Calendar as CalendarIcon } from "lucide-react"
 import type { DateRange } from "react-day-picker"
 
@@ -51,14 +52,14 @@ export function DatePickerWithRange({
             {date?.from ? (
               date.to ? (
                 <>
-                  {format(date.from, "LLL dd, y")} -{" "}
-                  {format(date.to, "LLL dd, y")}
+                  {format(date.from, "yyyy년 MM월 dd일", { locale: ko })} -{" "}
+                  {format(date.to, "yyyy년 MM월 dd일", { locale: ko })}
                 </>
               ) : (
-                format(date.from, "LLL dd, y")
+                format(date.from, "yyyy년 MM월 dd일", { locale: ko })
               )
             ) : (
-              <span>Pick a date</span>
+              <span>날짜 선택</span>
             )}
           </Button>
         </PopoverTrigger>
@@ -73,6 +74,8 @@ export function DatePickerWithRange({
             selected={date}
             onSelect={setDate}
             numberOfMonths={numberOfMonths}
+            locale={ko}
+            weekStartsOn={1}
           />
         </PopoverContent>
       </Popover>
