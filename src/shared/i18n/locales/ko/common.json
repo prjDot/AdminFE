@@ -330,6 +330,7 @@
     "deliveredUsers": "전달 {{count}}명",
     "deliveredTokens": "토큰 기준 {{count}}건 성공",
     "failed": "{{count}}건 실패",
+    "failedTokens": "토큰 실패 {{count}}건",
     "skipped": "스킵 {{count}}건",
     "targetCount": "대상 {{count}}명",
     "status": {

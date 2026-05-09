@@ -20,6 +20,7 @@ export interface NotificationRecord {
   deliveredCount: number;
   deliveredUserCount?: number | null;
   failedCount: number;
+  failedTokenCount?: number | null;
   skippedCount?: number | null;
   sentAt: string;
 }

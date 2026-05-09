@@ -18,6 +18,7 @@ export function NotificationHistoryItem({
   t,
 }: NotificationHistoryItemProps) {
   const deliveredUserCount = item.deliveredUserCount ?? item.deliveredCount ?? 0;
+  const failedTokenCount = item.failedTokenCount ?? 0;
   const skippedCount = item.skippedCount ?? 0;
   const targetCount = item.targetCount ?? null;
 
@@ -57,9 +58,18 @@ export function NotificationHistoryItem({
           </p>
           {item.deliveredUserCount !== undefined && (
             <p className="mt-1 text-xs">
-              {t("notifications.deliveredTokens", {
-                count: item.deliveredCount.toLocaleString(),
-              })}
+              {[
+                t("notifications.deliveredTokens", {
+                  count: item.deliveredCount.toLocaleString(),
+                }),
+                failedTokenCount > 0
+                  ? t("notifications.failedTokens", {
+                      count: failedTokenCount.toLocaleString(),
+                    })
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
             </p>
           )}
         </div>

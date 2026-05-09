@@ -330,6 +330,7 @@
     "deliveredUsers": "{{count}} delivered",
     "deliveredTokens": "{{count}} token successes",
     "failed": "{{count}} Failed",
+    "failedTokens": "{{count}} token failures",
     "skipped": "{{count}} skipped",
     "targetCount": "{{count}} targets",
     "status": {
