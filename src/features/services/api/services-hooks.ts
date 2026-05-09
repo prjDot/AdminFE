@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/shared/api/query-keys";
-import { toApiResponseError } from "@/shared/api/api-response";
 import {
   fetchIntegrationsOverview,
   fetchServiceLogs,
@@ -44,9 +43,6 @@ export function useRebootService() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.services.overview() });
     },
-    throwOnError: (error) => {
-      throw toApiResponseError(error);
-    },
   });
 }
 
@@ -57,9 +53,6 @@ export function useRefreshIntegration() {
     mutationFn: refreshIntegration,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.integrations.overview() });
-    },
-    throwOnError: (error) => {
-      throw toApiResponseError(error);
     },
   });
 }

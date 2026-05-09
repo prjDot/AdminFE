@@ -87,7 +87,7 @@ export function ServicesOverview() {
   const selectedService =
     services.find((s) => s.id === selectedServiceId) ?? null;
   const selectedMeta = selectedService
-    ? SERVICE_META[selectedService.id]
+    ? SERVICE_META[selectedService.id.toLowerCase()]
     : null;
   const SelectedIcon = selectedMeta?.icon ?? Server;
   const globalStatus = deriveGlobalStatus(services);
@@ -241,7 +241,7 @@ export function ServicesOverview() {
       </h3>
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
         {services.map((service) => {
-          const meta = SERVICE_META[service.id];
+          const meta = SERVICE_META[service.id.toLowerCase()];
           const ServiceIcon = meta?.icon ?? Server;
           return (
             <button
@@ -417,7 +417,7 @@ export function ServicesOverview() {
 
 // Helpers
 function getServiceName(service: ServiceStatus, t: (key: string) => string) {
-  const meta = SERVICE_META[service.id];
+  const meta = SERVICE_META[service.id.toLowerCase()];
   return meta?.nameKey ? t(meta.nameKey) : service.name;
 }
 

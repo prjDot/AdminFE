@@ -14,6 +14,8 @@
       "inviteAdmin": "관리자 초대",
       "manageCategories": "카테고리 관리",
       "sendNotification": "알림 발송",
+      "sending": "발송 중",
+      "export": "내보내기",
       "save": "저장"
     },
     "loading": "로딩 중입니다...",
@@ -315,12 +317,16 @@
     "messageBody": "메시지 본문",
     "titlePlaceholder": "예: 긴급 실종 알림",
     "messagePlaceholder": "푸시 메시지를 입력하세요...",
+    "userIdsField": "특정 사용자 ID",
+    "userIdsPlaceholder": "특정 대상일 때 UUID를 쉼표 또는 줄바꿈으로 입력하세요.",
     "historyTitle": "최근 브로드캐스트",
+    "noHistory": "발송 이력이 없습니다.",
     "systemMaintenanceAlert": "시스템 점검 안내",
     "foundDogNearby": "근처에서 강아지를 발견했어요!",
     "mockBody": "발송된 알림 본문 예시입니다.",
     "targetLine": "대상: 전체 사용자",
-    "delivered": "{{count}}건 전달"
+    "delivered": "{{count}}건 전달",
+    "failed": "{{count}}건 실패"
   },
   "services": {
     "title": "서버 상태 모니터링",

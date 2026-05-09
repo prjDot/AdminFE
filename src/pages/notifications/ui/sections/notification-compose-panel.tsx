@@ -4,16 +4,21 @@ import { useForm } from "react-hook-form";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { useSendNotification } from "@/pages/notifications/api/notification-hooks";
+import {
+  ApiResponseError,
+  toApiResponseError,
+} from "@/shared/api/api-response";
 
 interface NotificationFormValues {
   target: "all" | "active" | "specific";
   title: string;
   body: string;
+  userIdsText: string;
 }
 
 interface NotificationComposePanelProps {
   onSendSuccess: () => void;
-  onSendError: () => void;
+  onSendError: (message?: string) => void;
 }
 
 export function NotificationComposePanel({
@@ -26,6 +31,7 @@ export function NotificationComposePanel({
       target: "all",
       title: "",
       body: "",
+      userIdsText: "",
     },
   });
 
@@ -37,11 +43,12 @@ export function NotificationComposePanel({
         target: data.target,
         title: data.title,
         body: data.body,
+        userIds: parseUserIds(data.userIdsText),
       });
       reset();
       onSendSuccess();
-    } catch {
-      onSendError();
+    } catch (error) {
+      onSendError(getNotificationErrorMessage(error));
     }
   });
 
@@ -90,6 +97,16 @@ export function NotificationComposePanel({
             required
           />
         </label>
+        <label className="space-y-2">
+          <span className="text-sm font-medium">
+            {t("notifications.userIdsField")}
+          </span>
+          <textarea
+            {...register("userIdsText")}
+            placeholder={t("notifications.userIdsPlaceholder")}
+            className="min-h-[72px] w-full resize-none rounded-md border border-input bg-transparent p-3 text-sm"
+          />
+        </label>
         <Button
           type="submit"
           className="w-full gap-2"
@@ -103,4 +120,26 @@ export function NotificationComposePanel({
       </form>
     </div>
   );
+}
+
+function parseUserIds(value: string) {
+  const userIds = value
+    .split(/[,\n]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  return userIds.length > 0 ? userIds : undefined;
+}
+
+function getNotificationErrorMessage(error: unknown) {
+  const normalizedError = toApiResponseError(error);
+  if (!(normalizedError instanceof ApiResponseError)) {
+    return undefined;
+  }
+
+  return [
+    normalizedError.code,
+    normalizedError.requestId ? `requestId=${normalizedError.requestId}` : null,
+  ]
+    .filter(Boolean)
+    .join(" / ");
 }

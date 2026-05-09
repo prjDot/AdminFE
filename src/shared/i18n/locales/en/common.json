@@ -14,6 +14,8 @@
       "inviteAdmin": "Invite Admin",
       "manageCategories": "Manage Categories",
       "sendNotification": "Send Notification",
+      "sending": "Sending",
+      "export": "Export",
       "save": "Save"
     },
     "loading": "Loading...",
@@ -315,12 +317,16 @@
     "messageBody": "Message Body",
     "titlePlaceholder": "e.g. Urgent Missing Report",
     "messagePlaceholder": "Enter the push message...",
+    "userIdsField": "Specific User IDs",
+    "userIdsPlaceholder": "Enter UUIDs separated by commas or new lines for specific targets.",
     "historyTitle": "Recent Broadcasts",
+    "noHistory": "No notification history yet.",
     "systemMaintenanceAlert": "System Maintenance Alert",
     "foundDogNearby": "Found Dog nearby!",
     "mockBody": "This is the body of the notification that was sent out.",
     "targetLine": "Target: All Users",
-    "delivered": "{{count}} Delivered"
+    "delivered": "{{count}} Delivered",
+    "failed": "{{count}} Failed"
   },
   "services": {
     "title": "Server Status Monitoring",

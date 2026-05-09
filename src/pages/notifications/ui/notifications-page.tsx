@@ -20,7 +20,14 @@ export function NotificationsPage() {
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         <NotificationComposePanel
           onSendSuccess={() => setFeedback({ tone: "success", message: t("common.feedback.sent") })}
-          onSendError={() => setFeedback({ tone: "error", message: t("common.feedback.failed") })}
+          onSendError={(message) =>
+            setFeedback({
+              tone: "error",
+              message: message
+                ? `${t("common.feedback.failed")} (${message})`
+                : t("common.feedback.failed"),
+            })
+          }
         />
         <NotificationHistoryPanel />
       </div>

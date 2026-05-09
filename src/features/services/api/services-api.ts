@@ -51,7 +51,7 @@ function toIntegrationStatus(status: unknown): IntegrationStatusValue {
 function normalizeService(id: string, rawValue: unknown): ServiceStatus {
   const raw = asRecord(rawValue);
   return {
-    id: String(raw.id ?? raw.serviceId ?? id).toLowerCase(),
+    id: String(raw.id ?? raw.serviceId ?? id),
     name: String(raw.name ?? raw.serviceName ?? raw.id ?? id),
     status: toServiceStatus(raw.status),
     checkedAt: String(raw.checkedAt ?? raw.lastCheckedAt ?? new Date().toISOString()),
