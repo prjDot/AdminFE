@@ -2,7 +2,8 @@ import { useAuthStore } from "@/features/auth/model/auth-store";
 import { Button } from "@/shared/ui/button";
 import { useTranslation } from "react-i18next";
 import { UiPreferenceControls } from "@/widgets/layout/ui/ui-preference-controls";
-import { Menu, Bell, LogOut } from "lucide-react";
+import { Menu, Bell, LogOut, RefreshCw } from "lucide-react";
+import { useIsFetching, useQueryClient } from "@tanstack/react-query";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/shared/ui/sheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
 import { Link } from "react-router-dom";
@@ -11,6 +12,8 @@ import { useNotificationHistory } from "@/features/notifications/api/notificatio
 
 export function AdminHeader() {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const isFetching = useIsFetching();
   const admin = useAuthStore((state) => state.admin);
   const logout = useAuthStore((state) => state.logout);
   const adminName = admin?.name || t("header.fallbackAdmin");
@@ -19,6 +22,11 @@ export function AdminHeader() {
     pageSize: 5,
   });
   const notifications = notificationData?.items ?? [];
+  const handleRefresh = () => {
+    void queryClient.invalidateQueries({
+      refetchType: "active",
+    });
+  };
 
   return (
     <header className="flex h-14 shrink-0 items-center justify-between gap-2 border-b bg-card px-2 sm:px-4 lg:px-6">
@@ -42,6 +50,16 @@ export function AdminHeader() {
       </div>
       
       <div className="flex min-w-0 items-center gap-1 sm:gap-2 md:gap-4">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleRefresh}
+          aria-label={t("common.actions.refresh")}
+          disabled={isFetching > 0}
+        >
+          <RefreshCw className={isFetching > 0 ? "h-5 w-5 animate-spin" : "h-5 w-5"} />
+        </Button>
+
         {/* Alerts Notification Bell */}
         <Popover>
           <PopoverTrigger asChild>

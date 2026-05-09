@@ -16,6 +16,7 @@
       "sendNotification": "알림 발송",
       "sending": "발송 중",
       "export": "내보내기",
+      "refresh": "새로고침",
       "save": "저장"
     },
     "loading": "로딩 중입니다...",
