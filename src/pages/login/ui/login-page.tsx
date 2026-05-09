@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ShieldCheck } from "lucide-react";
@@ -9,9 +9,7 @@ import { FormStatus } from "@/shared/ui/form-status";
 
 export function LoginPage() {
   const { t } = useTranslation();
-  const bootstrapped = useAuthStore((state) => state.bootstrapped);
   const step = useAuthStore((state) => state.step);
-  const bootstrapSession = useAuthStore((state) => state.bootstrapSession);
   const requestGoogleLogin = useAuthStore((state) => state.requestGoogleLogin);
   const isAuthenticating = useAuthStore((state) => state.isAuthenticating);
   const navigate = useNavigate();
@@ -19,15 +17,11 @@ export function LoginPage() {
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    void bootstrapSession();
-  }, [bootstrapSession]);
-
-  if (bootstrapped && step === "AUTHENTICATED") {
+  if (step === "AUTHENTICATED") {
     return <Navigate to="/dashboard" replace />;
   }
 
-  if (bootstrapped && (step === "PASSKEY_ENROLL" || step === "MFA_PENDING")) {
+  if (step === "PASSKEY_ENROLL" || step === "MFA_PENDING") {
     return <Navigate to="/login/mfa" replace />;
   }
 

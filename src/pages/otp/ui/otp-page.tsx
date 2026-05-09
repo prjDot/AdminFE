@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { KeyRound } from "lucide-react";
@@ -10,18 +10,9 @@ export function OTPPage() {
   const { t } = useTranslation();
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const {
-    step,
-    tempEmail,
-    bootstrapSession,
-    completePasskeyStep,
-    isAuthenticating,
-  } = useAuthStore();
+  const { step, tempEmail, completePasskeyStep, isAuthenticating } =
+    useAuthStore();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    void bootstrapSession();
-  }, [bootstrapSession]);
 
   if (step === "NONE" || step === "EMAIL_VERIFICATION_REQUIRED") {
     return <Navigate to="/login" replace />;
@@ -58,8 +49,12 @@ export function OTPPage() {
               {isEnroll ? t("passkey.enrollTitle") : t("passkey.verifyTitle")}
             </h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              {isEnroll ? t("passkey.enrollDescription") : t("passkey.verifyDescription")}
-              {tempEmail ? <strong className="block pt-1">{tempEmail}</strong> : null}
+              {isEnroll
+                ? t("passkey.enrollDescription")
+                : t("passkey.verifyDescription")}
+              {tempEmail ? (
+                <strong className="block pt-1">{tempEmail}</strong>
+              ) : null}
             </p>
           </div>
         </div>

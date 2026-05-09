@@ -253,6 +253,15 @@ function releasePasskeyActionLock(ownerId: string | null) {
   }
 }
 
+function clearPasskeyActionState() {
+  activePasskeyAttempt = null;
+  passkeyActionInFlight = false;
+
+  if (typeof window !== "undefined") {
+    window.localStorage.removeItem(PASSKEY_ACTION_LOCK_STORAGE_KEY);
+  }
+}
+
 function replacePasskeyAttempt(
   step: Extract<AuthStep, "PASSKEY_ENROLL" | "MFA_PENDING">,
   options: AdminPasskeyOptionsResponse,
@@ -509,7 +518,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   requestGoogleLogin: async () => {
-    set({ isAuthenticating: true });
+    clearPasskeyActionState();
+    clearStoredAdminSession();
+    set({ isAuthenticating: true, step: "NONE", pendingPasskey: null });
 
     try {
       const firebaseIdToken = await getGoogleFirebaseIdToken();
@@ -664,6 +675,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
 
     await signOutFirebase();
+    clearPasskeyActionState();
     clearStoredAdminSession();
     set({
       step: "NONE",
