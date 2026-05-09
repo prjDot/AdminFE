@@ -24,10 +24,15 @@ export function getNotificationStatusBadge(status: string) {
   if (["failed", "failure", "error"].includes(normalized)) {
     return "destructive";
   }
-  if (["partial", "sending", "pending"].includes(normalized)) {
+  if (normalized === "partial") return "warning";
+  if (normalized === "skipped") return "secondary";
+  if (["sent", "success", "completed"].includes(normalized)) {
+    return "success";
+  }
+  if (["sending", "pending"].includes(normalized)) {
     return "secondary";
   }
-  return "default";
+  return "secondary";
 }
 
 export function getNotificationStatusLabelKey(status: string) {

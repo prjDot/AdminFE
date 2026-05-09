@@ -21,6 +21,8 @@ export function NotificationHistoryItem({
   const failedTokenCount = item.failedTokenCount ?? 0;
   const skippedCount = item.skippedCount ?? 0;
   const targetCount = item.targetCount ?? null;
+  const hasTokenDetails =
+    item.deliveredUserCount !== undefined || failedTokenCount > 0;
 
   return (
     <div className="flex flex-col justify-between rounded-lg border p-4 transition-colors hover:bg-muted/50 sm:flex-row sm:items-center">
@@ -56,7 +58,7 @@ export function NotificationHistoryItem({
               .filter(Boolean)
               .join(" · ")}
           </p>
-          {item.deliveredUserCount !== undefined && (
+          {hasTokenDetails && (
             <p className="mt-1 text-xs">
               {[
                 t("notifications.deliveredTokens", {
