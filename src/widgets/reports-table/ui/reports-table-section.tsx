@@ -1,12 +1,22 @@
-import { useMemo, useState } from "react";
-import { type ColumnDef } from "@tanstack/react-table";
-import { AlertTriangle, LayoutGrid, List, MoreHorizontal, ShieldAlert, Users } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Download, LayoutGrid, List } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { REPORT_STATUS, type ReportStatus } from "@/shared/config/constants";
-import { Badge } from "@/shared/ui/badge";
+import {
+  type AdminReportListItem,
+  type AdminReportListParams,
+  deleteReportTarget,
+  dismissReport,
+  exportReportsCSV,
+  fetchReportDetail,
+  fetchReportReporters,
+  fetchReports,
+  resolveReport,
+  warnReport,
+} from "@/features/reports/api/reports-api";
+import { queryKeys } from "@/shared/api/query-keys";
 import { Button } from "@/shared/ui/button";
-import { Card, CardContent, CardHeader } from "@/shared/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -15,203 +25,390 @@ import {
   DialogTitle,
 } from "@/shared/ui/dialog";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/shared/ui/dropdown-menu";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/shared/ui/toggle-group";
 import { DataTable } from "@/widgets/data-table/ui/data-table";
-
-interface Report {
-  id: string;
-  targetType: "Notice" | "Post" | "Comment";
-  reason: string;
-  reporterCount: number;
-  status: ReportStatus;
-  lastReportedAt: string;
-}
-
-interface Reporter {
-  name: string;
-  comment: string;
-  autoFlagged: boolean;
-}
-
-const REPORT_STATUS_LABEL_KEY: Record<ReportStatus, string> = {
-  [REPORT_STATUS.PENDING]: "reports.status.pending",
-  [REPORT_STATUS.REVIEWING]: "reports.status.reviewing",
-  [REPORT_STATUS.RESOLVED]: "reports.status.resolved",
-  [REPORT_STATUS.REJECTED]: "reports.status.rejected",
-};
-
-const mockReports: Report[] = [
-  { id: "R001", targetType: "Notice", reason: "Spam or misleading", reporterCount: 3, status: REPORT_STATUS.PENDING, lastReportedAt: "2026-04-15" },
-  { id: "R002", targetType: "Comment", reason: "Harassment", reporterCount: 12, status: REPORT_STATUS.REVIEWING, lastReportedAt: "2026-04-14" },
-  { id: "R003", targetType: "Post", reason: "Inappropriate content", reporterCount: 6, status: REPORT_STATUS.RESOLVED, lastReportedAt: "2026-04-12" },
-];
-
-const mockReporters: Record<string, Reporter[]> = {
-  R001: [
-    { name: "User132", comment: "Duplicated listing", autoFlagged: false },
-    { name: "User154", comment: "Looks like promotion", autoFlagged: true },
-    { name: "User177", comment: "Contains misleading details", autoFlagged: false },
-  ],
-  R002: [
-    { name: "User241", comment: "Harassing language", autoFlagged: false },
-    { name: "User255", comment: "Repeated personal attacks", autoFlagged: true },
-    { name: "User266", comment: "Need moderator review", autoFlagged: false },
-    { name: "User289", comment: "Offensive terms", autoFlagged: false },
-    { name: "User301", comment: "Escalate urgently", autoFlagged: true },
-  ],
-  R003: [
-    { name: "User409", comment: "Graphic media", autoFlagged: true },
-    { name: "User415", comment: "Policy violation", autoFlagged: false },
-  ],
-};
+import { ReportDetailContent } from "./report-detail-content";
+import { ReportsGrid, useReportColumns } from "./report-list-content";
+import {
+  PAGE_SIZE,
+  STATUS_OPTIONS,
+  TARGET_TYPE_OPTIONS,
+} from "./report-table-utils";
 
 export function ReportsTableSection() {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
+
+  const [page, setPage] = useState(1);
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
-  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
-  const [isReportersOpen, setIsReportersOpen] = useState(false);
+  const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [targetTypeFilter, setTargetTypeFilter] = useState<string>("ALL");
 
-  const openReporters = (report: Report) => {
-    setSelectedReport(report);
-    setIsReportersOpen(true);
-  };
+  useEffect(() => {
+    setPage(1);
+  }, [statusFilter, targetTypeFilter]);
 
-  const columns = useMemo<ColumnDef<Report>[]>(
-    () => [
-      { accessorKey: "targetType", header: t("reports.table.targetType"), cell: ({ row }) => <span className="font-medium">{String(row.getValue("targetType"))}</span> },
-      { accessorKey: "reason", header: t("reports.table.primaryReason") },
-      {
-        accessorKey: "reporterCount",
-        header: t("reports.table.reports"),
-        cell: ({ row }) => {
-          const count = row.getValue("reporterCount") as number;
-          const countVariant = count >= 10 ? "destructive" : count >= 5 ? "warning" : "secondary";
-          return (
-            <div className="flex items-center gap-2">
-              <Badge variant={countVariant}>{count}</Badge>
-              {count >= 10 && <Badge variant="destructive" className="px-1 text-[10px]">{t("reports.badges.priority")}</Badge>}
-              {count >= 5 && count < 10 && <Badge variant="outline" className="px-1 text-[10px]">{t("reports.badges.autoHidden")}</Badge>}
-            </div>
-          );
-        },
-      },
-      {
-        accessorKey: "status",
-        header: t("reports.table.status"),
-        cell: ({ row }) => {
-          const status = row.getValue("status") as ReportStatus;
-          const variant = status === REPORT_STATUS.PENDING ? "destructive" : status === REPORT_STATUS.REVIEWING ? "warning" : status === REPORT_STATUS.RESOLVED ? "default" : "secondary";
-          return <Badge variant={variant}>{t(REPORT_STATUS_LABEL_KEY[status])}</Badge>;
-        },
-      },
-      { accessorKey: "lastReportedAt", header: t("reports.table.lastReported") },
-      {
-        id: "actions",
-        cell: ({ row }) => {
-          const report = row.original;
-          return (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-8 w-8 p-0" onClick={(event) => event.stopPropagation()}>
-                  <span className="sr-only">{t("reports.table.openMenu")}</span>
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" onClick={(event) => event.stopPropagation()}>
-                <DropdownMenuLabel>{t("reports.menu.actions")}</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => toast.info(t("reports.feedback.openTarget"))}>{t("reports.menu.viewTarget")}</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => openReporters(report)}>{t("reports.menu.reviewReporters")}</DropdownMenuItem>
-                <DropdownMenuSeparator />
-                {report.status === REPORT_STATUS.PENDING && (
-                  <>
-                    <DropdownMenuItem className="text-destructive focus:bg-destructive focus:text-destructive-foreground" onClick={() => toast.warning(t("reports.feedback.deleteWarn"))}>
-                      {t("reports.menu.deleteWarn")}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => toast.success(t("reports.feedback.dismissed"))}>{t("reports.menu.dismiss")}</DropdownMenuItem>
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          );
-        },
-      },
-    ],
-    [t]
+  const queryParams = useMemo<AdminReportListParams>(
+    () => ({
+      page,
+      pageSize: PAGE_SIZE,
+      ...(statusFilter !== "ALL" ? { status: statusFilter } : {}),
+      ...(targetTypeFilter !== "ALL" ? { targetType: targetTypeFilter } : {}),
+    }),
+    [page, statusFilter, targetTypeFilter],
   );
 
-  const selectedReporters = selectedReport ? (mockReporters[selectedReport.id] ?? []) : [];
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: queryKeys.reports.list(queryParams),
+    queryFn: () => fetchReports(queryParams),
+  });
+
+  const { data: reportDetail, isLoading: isDetailLoading } = useQuery({
+    queryKey: queryKeys.reports.detail(selectedReportId ?? ""),
+    queryFn: () => fetchReportDetail(selectedReportId!),
+    enabled: !!selectedReportId,
+  });
+
+  const { data: reporters, isLoading: isReportersLoading } = useQuery({
+    queryKey: queryKeys.reports.reporters(selectedReportId ?? ""),
+    queryFn: () => fetchReportReporters(selectedReportId!),
+    enabled: !!selectedReportId,
+  });
+
+  const items = data?.items ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  const invalidateAndClose = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: ["reports"] });
+    setIsDetailOpen(false);
+  }, [queryClient]);
+
+  const { mutate: mutateDismiss, isPending: isDismissing } = useMutation({
+    mutationFn: (reportId: string) => dismissReport(reportId),
+    onSuccess: () => {
+      invalidateAndClose();
+      toast.success(t("reports.feedback.dismissed", "신고가 기각되었습니다."));
+    },
+    onError: () =>
+      toast.error(t("common.feedback.failed", "처리에 실패했습니다.")),
+  });
+
+  const { mutate: mutateResolve, isPending: isResolving } = useMutation({
+    mutationFn: (reportId: string) => resolveReport(reportId),
+    onSuccess: () => {
+      invalidateAndClose();
+      toast.success(t("reports.feedback.resolved", "신고가 해결되었습니다."));
+    },
+    onError: () =>
+      toast.error(t("common.feedback.failed", "처리에 실패했습니다.")),
+  });
+
+  const { mutate: mutateWarn, isPending: isWarning } = useMutation({
+    mutationFn: (reportId: string) => warnReport(reportId),
+    onSuccess: () => {
+      invalidateAndClose();
+      toast.success(t("reports.feedback.warned", "경고가 발송되었습니다."));
+    },
+    onError: () =>
+      toast.error(t("common.feedback.failed", "처리에 실패했습니다.")),
+  });
+
+  const { mutate: mutateDeleteTarget, isPending: isDeletingTarget } =
+    useMutation({
+      mutationFn: (reportId: string) => deleteReportTarget(reportId),
+      onSuccess: () => {
+        invalidateAndClose();
+        toast.success(
+          t("reports.feedback.targetDeleted", "대상이 삭제되었습니다."),
+        );
+      },
+      onError: () =>
+        toast.error(t("common.feedback.failed", "처리에 실패했습니다.")),
+    });
+
+  const openReportDetail = useCallback((report: AdminReportListItem) => {
+    setSelectedReportId(report.id);
+    setIsDetailOpen(true);
+  }, []);
+
+  const columns = useReportColumns({
+    onViewDetail: openReportDetail,
+    onDismiss: mutateDismiss,
+    onResolve: mutateResolve,
+    onWarn: mutateWarn,
+  });
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <ToggleGroup type="single" value={viewMode} onValueChange={(value: string) => value && setViewMode(value as "list" | "grid")} className="rounded-md border bg-card">
-          <ToggleGroupItem value="list" aria-label={t("common.view.list")}><List className="h-4 w-4" /></ToggleGroupItem>
-          <ToggleGroupItem value="grid" aria-label={t("common.view.grid")}><LayoutGrid className="h-4 w-4" /></ToggleGroupItem>
-        </ToggleGroup>
-      </div>
+      <ReportsToolbar
+        statusFilter={statusFilter}
+        targetTypeFilter={targetTypeFilter}
+        viewMode={viewMode}
+        onStatusFilterChange={setStatusFilter}
+        onTargetTypeFilterChange={setTargetTypeFilter}
+        onViewModeChange={setViewMode}
+        onExportCSV={() => {
+          void handleExportCSV(statusFilter, targetTypeFilter);
+        }}
+      />
 
-      {viewMode === "list" ? (
-        <DataTable columns={columns} data={mockReports} onRowClick={openReporters} />
-      ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {mockReports.map((report) => (
-            <Card key={report.id} className="cursor-pointer transition-all hover:-translate-y-1 hover:border-destructive/50 hover:shadow-md" onClick={() => openReporters(report)}>
-              <CardHeader className="border-b bg-muted/10 py-3">
-                <div className="mb-2 flex items-start justify-between gap-2">
-                  <Badge variant="outline">{report.targetType}</Badge>
-                  <Badge variant="warning">{t("reports.flagsCount", { count: report.reporterCount })}</Badge>
-                </div>
-                <div className="line-clamp-2 text-sm font-semibold">{report.reason}</div>
-              </CardHeader>
-              <CardContent className="flex items-center justify-between pt-3 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1 font-medium"><AlertTriangle className="h-3 w-3" />{t(REPORT_STATUS_LABEL_KEY[report.status])}</span>
-                <span>{report.lastReportedAt}</span>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+      {isLoading && <LoadingState />}
+      {isError && <ErrorState error={error} />}
+
+      {!isLoading && !isError && (
+        <>
+          {viewMode === "list" ? (
+            <DataTable
+              columns={columns}
+              data={items}
+              onRowClick={openReportDetail}
+            />
+          ) : (
+            <ReportsGrid items={items} onViewDetail={openReportDetail} />
+          )}
+
+          <PaginationControls
+            page={page}
+            total={total}
+            totalPages={totalPages}
+            onPrevious={() => setPage((p) => p - 1)}
+            onNext={() => setPage((p) => p + 1)}
+          />
+        </>
       )}
 
-      <Dialog open={isReportersOpen} onOpenChange={setIsReportersOpen}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-150">
           <DialogHeader>
-            <DialogTitle>{t("reports.reporters.title")}</DialogTitle>
-            <DialogDescription>{t("reports.reporters.description", { targetType: selectedReport?.targetType ?? "-" })}</DialogDescription>
+            <DialogTitle>{t("reports.detail.title", "신고 상세")}</DialogTitle>
+            <DialogDescription>
+              {t(
+                "reports.detail.description",
+                "신고 세부 정보 및 처리 옵션을 확인하세요.",
+              )}
+            </DialogDescription>
           </DialogHeader>
-          {selectedReport && (
-            <div className="space-y-4 py-4">
-              <div className="flex items-center justify-between rounded-lg border bg-muted p-3">
-                <div className="flex items-center gap-2 text-sm font-medium"><AlertTriangle className="h-4 w-4 text-warning" />{t("reports.reporters.primaryReason")}</div>
-                <Badge variant="outline">{selectedReport.reason}</Badge>
-              </div>
-              <div className="space-y-3">
-                <h4 className="flex items-center gap-1 text-sm font-semibold"><Users className="h-4 w-4" />{t("reports.reporters.listTitle", { count: selectedReport.reporterCount })}</h4>
-                <div className="max-h-64 space-y-2 overflow-y-auto rounded-md border p-2">
-                  {selectedReporters.map((reporter) => (
-                    <div key={reporter.name} className="flex items-center justify-between rounded-md p-2 hover:bg-muted/50">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-medium">{reporter.name}</span>
-                        <span className="mr-2 text-xs text-muted-foreground">{reporter.comment}</span>
-                      </div>
-                      {reporter.autoFlagged && <Badge variant="destructive" className="h-5 px-1"><ShieldAlert className="mr-1 h-3 w-3" />{t("reports.badges.autoFlagged")}</Badge>}
-                    </div>
-                  ))}
-                  {selectedReport.reporterCount > selectedReporters.length && (
-                    <p className="py-2 text-center text-xs text-muted-foreground">{t("reports.reporters.more", { count: selectedReport.reporterCount - selectedReporters.length })}</p>
-                  )}
-                </div>
-              </div>
-            </div>
+
+          {(isDetailLoading || isReportersLoading) && <DialogLoadingState />}
+          {!isDetailLoading && reportDetail && (
+            <ReportDetailContent
+              detail={reportDetail}
+              reporters={reporters ?? []}
+              isActionPending={
+                isDismissing || isResolving || isWarning || isDeletingTarget
+              }
+              onDismiss={() => mutateDismiss(reportDetail.id)}
+              onResolve={() => mutateResolve(reportDetail.id)}
+              onWarn={() => mutateWarn(reportDetail.id)}
+              onDeleteTarget={() => mutateDeleteTarget(reportDetail.id)}
+            />
           )}
         </DialogContent>
       </Dialog>
+    </div>
+  );
+
+  async function handleExportCSV(status: string, targetType: string) {
+    try {
+      const blob = await exportReportsCSV({
+        ...(status !== "ALL" ? { status } : {}),
+        ...(targetType !== "ALL" ? { targetType } : {}),
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "reports.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error(
+        t("reports.feedback.exportError", "CSV 다운로드에 실패했습니다."),
+      );
+    }
+  }
+}
+
+function ReportsToolbar({
+  statusFilter,
+  targetTypeFilter,
+  viewMode,
+  onStatusFilterChange,
+  onTargetTypeFilterChange,
+  onViewModeChange,
+  onExportCSV,
+}: {
+  statusFilter: string;
+  targetTypeFilter: string;
+  viewMode: "list" | "grid";
+  onStatusFilterChange: (value: string) => void;
+  onTargetTypeFilterChange: (value: string) => void;
+  onViewModeChange: (value: "list" | "grid") => void;
+  onExportCSV: () => void;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <Select value={statusFilter} onValueChange={onStatusFilterChange}>
+          <SelectTrigger className="h-9 w-35">
+            <SelectValue placeholder={t("reports.filter.status", "상태")} />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUS_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={targetTypeFilter}
+          onValueChange={onTargetTypeFilterChange}
+        >
+          <SelectTrigger className="h-9 w-45">
+            <SelectValue
+              placeholder={t("reports.filter.targetType", "대상 유형")}
+            />
+          </SelectTrigger>
+          <SelectContent>
+            {TARGET_TYPE_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1"
+          onClick={onExportCSV}
+        >
+          <Download className="h-4 w-4" />
+          {t("reports.exportCsv", {
+            defaultValue: t("common.actions.exportCsv", "CSV"),
+          })}
+        </Button>
+
+        <ToggleGroup
+          type="single"
+          value={viewMode}
+          onValueChange={(value: string) =>
+            value && onViewModeChange(value as "list" | "grid")
+          }
+          className="rounded-md border bg-card"
+        >
+          <ToggleGroupItem
+            value="list"
+            aria-label={t("common.view.list", "리스트")}
+          >
+            <List className="h-4 w-4" />
+          </ToggleGroupItem>
+          <ToggleGroupItem
+            value="grid"
+            aria-label={t("common.view.grid", "그리드")}
+          >
+            <LayoutGrid className="h-4 w-4" />
+          </ToggleGroupItem>
+        </ToggleGroup>
+      </div>
+    </div>
+  );
+}
+
+function PaginationControls({
+  page,
+  total,
+  totalPages,
+  onPrevious,
+  onNext,
+}: {
+  page: number;
+  total: number;
+  totalPages: number;
+  onPrevious: () => void;
+  onNext: () => void;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <div className="flex items-center justify-between px-2 py-2">
+      <span className="text-sm text-muted-foreground">
+        총 {total}건 &middot; {page} / {totalPages} 페이지
+      </span>
+      <div className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onPrevious}
+          disabled={page <= 1}
+        >
+          {t("common.actions.previous", "이전")}
+        </Button>
+        <span className="min-w-12 text-center text-sm tabular-nums">
+          {page} / {totalPages}
+        </span>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onNext}
+          disabled={page >= totalPages}
+        >
+          {t("common.actions.next", "다음")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function LoadingState() {
+  const { t } = useTranslation();
+
+  return (
+    <div className="flex items-center justify-center rounded-xl border bg-card py-16">
+      <span className="animate-pulse text-muted-foreground">
+        {t("common.loading", "로딩 중...")}
+      </span>
+    </div>
+  );
+}
+
+function DialogLoadingState() {
+  const { t } = useTranslation();
+
+  return (
+    <div className="flex items-center justify-center py-16">
+      <span className="animate-pulse text-muted-foreground">
+        {t("common.loading", "로딩 중...")}
+      </span>
+    </div>
+  );
+}
+
+function ErrorState({ error }: { error: unknown }) {
+  const { t } = useTranslation();
+
+  return (
+    <div className="rounded-xl border border-destructive/50 bg-destructive/10 px-4 py-6 text-center text-sm text-destructive">
+      {error instanceof Error
+        ? error.message
+        : t("common.error.generic", "데이터를 불러오는 데 실패했습니다.")}
     </div>
   );
 }

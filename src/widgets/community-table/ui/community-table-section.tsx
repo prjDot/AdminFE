@@ -1,10 +1,27 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ColumnDef } from "@tanstack/react-table";
-import { LayoutGrid, List, MessageSquare, MoreHorizontal, ThumbsUp } from "lucide-react";
+import {
+  LayoutGrid,
+  List,
+  MessageSquare,
+  MoreHorizontal,
+  ThumbsUp,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import {
+  type AdminCommunityPostListItem,
+  type AdminCommunityPostListParams,
+  deleteCommunityPost,
+  fetchCommunityPostDetail,
+  fetchCommunityPosts,
+  updateCommunityPostVisibility,
+} from "@/features/community/api/community-api";
+import { queryKeys } from "@/shared/api/query-keys";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
+import { ConfirmAction } from "@/shared/ui/confirm-action";
 import { Card, CardContent, CardHeader } from "@/shared/ui/card";
 import {
   DropdownMenu,
@@ -14,63 +31,163 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/shared/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/shared/ui/sheet";
+import { Input } from "@/shared/ui/input";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/shared/ui/sheet";
 import { ToggleGroup, ToggleGroupItem } from "@/shared/ui/toggle-group";
 import { DataTable } from "@/widgets/data-table/ui/data-table";
 
-export const POST_CATEGORY = { GENERAL: "General", QNA: "QnA", TIP: "Tip" } as const;
-export type PostCategory = typeof POST_CATEGORY[keyof typeof POST_CATEGORY];
+// ─── Pure helpers ─────────────────────────────────────────────────────────────
 
-interface Post {
-  id: string;
-  title: string;
-  category: PostCategory;
-  author: string;
-  likes: number;
-  comments: number;
-  createdAt: string;
+function getCategoryVariant(
+  category: string,
+): "destructive" | "default" | "secondary" {
+  const lower = category.toLowerCase();
+  if (lower === "qna") return "destructive";
+  if (lower === "tip") return "default";
+  return "secondary";
 }
 
-const CATEGORY_LABEL_KEY: Record<PostCategory, string> = {
-  [POST_CATEGORY.GENERAL]: "community.categories.general",
-  [POST_CATEGORY.QNA]: "community.categories.qna",
-  [POST_CATEGORY.TIP]: "community.categories.tip",
-};
+function formatDate(dateString: string | null | undefined): string {
+  if (!dateString) return "-";
+  return new Date(dateString).toLocaleDateString("ko-KR");
+}
 
-const mockPosts: Post[] = [
-  { id: "P001", title: "How to introduce a new puppy?", category: POST_CATEGORY.QNA, author: "DogLover99", likes: 24, comments: 12, createdAt: "2026-04-14" },
-  { id: "P002", title: "Best parks in Seoul", category: POST_CATEGORY.TIP, author: "SeoulWalker", likes: 56, comments: 8, createdAt: "2026-04-13" },
-  { id: "P003", title: "Just adopted this little guy!", category: POST_CATEGORY.GENERAL, author: "NewParent", likes: 120, comments: 34, createdAt: "2026-04-12" },
-  { id: "P004", title: "What food is best for senior cats?", category: POST_CATEGORY.QNA, author: "CatMom", likes: 15, comments: 22, createdAt: "2026-04-11" },
-];
+const PAGE_SIZE = 20;
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export function CommunityTableSection() {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
+
+  // ── UI state ────────────────────────────────────────────────────────────────
+  const [page, setPage] = useState(1);
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
-  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [query, setQuery] = useState("");
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
-  const openPost = (post: Post) => {
-    setSelectedPost(post);
+  // Reset to page 1 when search query changes
+  useEffect(() => {
+    setPage(1);
+  }, [query]);
+
+  // ── Query params ─────────────────────────────────────────────────────────────
+  const queryParams = useMemo<AdminCommunityPostListParams>(
+    () => ({
+      page,
+      pageSize: PAGE_SIZE,
+      ...(query.trim() ? { query: query.trim() } : {}),
+    }),
+    [page, query],
+  );
+
+  // ── Queries ───────────────────────────────────────────────────────────────────
+  const { data, isLoading, isError } = useQuery({
+    queryKey: queryKeys.community.list(queryParams),
+    queryFn: () => fetchCommunityPosts(queryParams),
+  });
+
+  const { data: postDetail, isLoading: isDetailLoading } = useQuery({
+    queryKey: queryKeys.community.detail(selectedPostId ?? ""),
+    queryFn: () => fetchCommunityPostDetail(selectedPostId!),
+    enabled: !!selectedPostId,
+  });
+
+  // ── Derived values ────────────────────────────────────────────────────────────
+  const items = data?.items ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  // ── Mutations ─────────────────────────────────────────────────────────────────
+  const { mutate: mutateHide } = useMutation({
+    mutationFn: (postId: string) =>
+      updateCommunityPostVisibility(postId, "HIDDEN"),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["community"] });
+      toast.warning(t("community.feedback.hidden", "게시글을 숨겼습니다."));
+    },
+    onError: () => {
+      toast.error(t("common.feedback.failed", "처리에 실패했습니다."));
+    },
+  });
+
+  const { mutate: mutateDelete } = useMutation({
+    mutationFn: (postId: string) => deleteCommunityPost(postId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["community"] });
+      setIsSheetOpen(false);
+      setSelectedPostId(null);
+      toast.success(
+        t("community.feedback.deleted", "게시글이 삭제되었습니다."),
+      );
+    },
+    onError: () => {
+      toast.error(t("common.feedback.failed", "처리에 실패했습니다."));
+    },
+  });
+
+  // ── Handlers ──────────────────────────────────────────────────────────────────
+  const openPost = (post: AdminCommunityPostListItem) => {
+    setSelectedPostId(post.id);
     setIsSheetOpen(true);
   };
 
-  const columns = useMemo<ColumnDef<Post>[]>(
+  // ── Columns ───────────────────────────────────────────────────────────────────
+  const columns = useMemo<ColumnDef<AdminCommunityPostListItem>[]>(
     () => [
-      { accessorKey: "title", header: t("community.table.title"), cell: ({ row }) => <span className="font-medium">{String(row.getValue("title"))}</span> },
+      {
+        accessorKey: "title",
+        header: t("community.table.title"),
+        cell: ({ row }) => (
+          <span className="font-medium">{String(row.getValue("title"))}</span>
+        ),
+      },
       {
         accessorKey: "category",
         header: t("community.table.category"),
         cell: ({ row }) => {
-          const category = row.getValue("category") as PostCategory;
-          const variant = category === POST_CATEGORY.QNA ? "destructive" : category === POST_CATEGORY.TIP ? "default" : "secondary";
-          return <Badge variant={variant}>{t(CATEGORY_LABEL_KEY[category])}</Badge>;
+          const category = String(row.getValue("category"));
+          return (
+            <Badge variant={getCategoryVariant(category)}>{category}</Badge>
+          );
         },
       },
-      { accessorKey: "author", header: t("community.table.author") },
-      { accessorKey: "likes", header: t("community.table.likes"), cell: ({ row }) => <div className="flex items-center gap-1"><ThumbsUp className="h-3 w-3 text-muted-foreground" />{String(row.getValue("likes"))}</div> },
-      { accessorKey: "comments", header: t("community.table.comments"), cell: ({ row }) => <div className="flex items-center gap-1"><MessageSquare className="h-3 w-3 text-muted-foreground" />{String(row.getValue("comments"))}</div> },
-      { accessorKey: "createdAt", header: t("community.table.createdAt") },
+      {
+        accessorKey: "author",
+        header: t("community.table.author"),
+      },
+      {
+        accessorKey: "likes",
+        header: t("community.table.likes"),
+        cell: ({ row }) => (
+          <div className="flex items-center gap-1">
+            <ThumbsUp className="h-3 w-3 text-muted-foreground" />
+            {String(row.getValue("likes"))}
+          </div>
+        ),
+      },
+      {
+        accessorKey: "comments",
+        header: t("community.table.comments"),
+        cell: ({ row }) => (
+          <div className="flex items-center gap-1">
+            <MessageSquare className="h-3 w-3 text-muted-foreground" />
+            {String(row.getValue("comments"))}
+          </div>
+        ),
+      },
+      {
+        accessorKey: "createdAt",
+        header: t("community.table.createdAt"),
+        cell: ({ row }) => formatDate(row.getValue("createdAt")),
+      },
       {
         id: "actions",
         cell: ({ row }) => {
@@ -78,54 +195,150 @@ export function CommunityTableSection() {
           return (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-8 w-8 p-0" onClick={(event) => event.stopPropagation()}>
-                  <span className="sr-only">{t("community.table.openMenu")}</span>
+                <Button
+                  variant="ghost"
+                  className="h-8 w-8 p-0"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <span className="sr-only">
+                    {t("community.table.openMenu")}
+                  </span>
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" onClick={(event) => event.stopPropagation()}>
-                <DropdownMenuLabel>{t("community.menu.actions")}</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => openPost(post)}>{t("community.menu.viewPost")}</DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-destructive focus:bg-destructive focus:text-destructive-foreground" onClick={() => toast.warning(t("community.feedback.deleted"))}>
-                  {t("community.menu.deletePost")}
+              <DropdownMenuContent
+                align="end"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <DropdownMenuLabel>
+                  {t("community.menu.actions")}
+                </DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => openPost(post)}>
+                  {t("community.menu.viewPost")}
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <ConfirmAction
+                  title={t("community.confirm.hideTitle", "게시글 숨김 처리")}
+                  description={t(
+                    "community.confirm.hideDescription",
+                    "이 커뮤니티 게시글을 숨김 처리하시겠습니까?",
+                  )}
+                  confirmLabel={t("community.menu.hidePost", "숨김 처리")}
+                  cancelLabel={t("common.actions.cancel", "취소")}
+                  onConfirm={() => mutateHide(post.id)}
+                >
+                  <DropdownMenuItem
+                    onSelect={(event) => event.preventDefault()}
+                  >
+                    {t("community.menu.hidePost", "숨김 처리")}
+                  </DropdownMenuItem>
+                </ConfirmAction>
+                <ConfirmAction
+                  title={t("community.confirm.deleteTitle", "게시글 삭제")}
+                  description={t(
+                    "community.confirm.deleteDescription",
+                    "이 커뮤니티 게시글을 삭제하시겠습니까? 이 작업은 되돌리기 어렵습니다.",
+                  )}
+                  confirmLabel={t("community.menu.deletePost")}
+                  cancelLabel={t("common.actions.cancel", "취소")}
+                  destructive
+                  onConfirm={() => mutateDelete(post.id)}
+                >
+                  <DropdownMenuItem
+                    className="text-destructive focus:bg-destructive focus:text-destructive-foreground"
+                    onSelect={(event) => event.preventDefault()}
+                  >
+                    {t("community.menu.deletePost")}
+                  </DropdownMenuItem>
+                </ConfirmAction>
               </DropdownMenuContent>
             </DropdownMenu>
           );
         },
       },
     ],
-    [t]
+    [t, mutateHide, mutateDelete],
   );
 
+  // ── Render ────────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <ToggleGroup type="single" value={viewMode} onValueChange={(value: string) => value && setViewMode(value as "list" | "grid")} className="rounded-md border bg-card">
-          <ToggleGroupItem value="list" aria-label={t("common.view.list")}><List className="h-4 w-4" /></ToggleGroupItem>
-          <ToggleGroupItem value="grid" aria-label={t("common.view.grid")}><LayoutGrid className="h-4 w-4" /></ToggleGroupItem>
+      {/* Toolbar */}
+      <div className="flex items-center justify-between gap-2">
+        <Input
+          placeholder={t(
+            "community.search.placeholder",
+            "제목/내용/작성자 검색",
+          )}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="max-w-sm"
+        />
+        <ToggleGroup
+          type="single"
+          value={viewMode}
+          onValueChange={(value: string) =>
+            value && setViewMode(value as "list" | "grid")
+          }
+          className="rounded-md border bg-card"
+        >
+          <ToggleGroupItem value="list" aria-label={t("common.view.list")}>
+            <List className="h-4 w-4" />
+          </ToggleGroupItem>
+          <ToggleGroupItem value="grid" aria-label={t("common.view.grid")}>
+            <LayoutGrid className="h-4 w-4" />
+          </ToggleGroupItem>
         </ToggleGroup>
       </div>
 
-      {viewMode === "list" ? (
-        <DataTable columns={columns} data={mockPosts} onRowClick={openPost} />
+      {/* Content */}
+      {isLoading ? (
+        <div className="py-12 text-center text-sm text-muted-foreground">
+          {t("common.loading", "불러오는 중...")}
+        </div>
+      ) : isError ? (
+        <div className="py-12 text-center text-sm text-destructive">
+          {t("common.error.fetch", "데이터를 불러오지 못했습니다.")}
+        </div>
+      ) : viewMode === "list" ? (
+        <DataTable columns={columns} data={items} onRowClick={openPost} />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {mockPosts.map((post) => (
-            <Card key={post.id} className="cursor-pointer transition-all hover:-translate-y-1 hover:border-primary/50 hover:shadow-md" onClick={() => openPost(post)}>
+          {items.map((post) => (
+            <Card
+              key={post.id}
+              className="cursor-pointer transition-all hover:-translate-y-1 hover:border-primary/50 hover:shadow-md"
+              onClick={() => openPost(post)}
+            >
               <CardHeader className="py-3">
                 <div className="mb-2 flex items-start justify-between gap-2">
-                  <Badge variant="outline" className="text-[10px]">{t(CATEGORY_LABEL_KEY[post.category])}</Badge>
-                  <span className="text-xs text-muted-foreground">{post.createdAt}</span>
+                  <Badge
+                    variant={getCategoryVariant(post.category)}
+                    className="text-[10px]"
+                  >
+                    {post.category}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">
+                    {formatDate(post.createdAt)}
+                  </span>
                 </div>
-                <div className="line-clamp-2 min-h-[40px] text-sm font-semibold">{post.title}</div>
+                <div className="line-clamp-2 min-h-[40px] text-sm font-semibold">
+                  {post.title}
+                </div>
               </CardHeader>
               <CardContent className="pt-0 text-xs text-muted-foreground">
-                <div className="mb-3">{t("community.postedBy", { author: post.author })}</div>
+                <div className="mb-3">
+                  {t("community.postedBy", { author: post.author })}
+                </div>
                 <div className="flex items-center gap-4 border-t pt-3">
-                  <span className="flex items-center gap-1"><ThumbsUp className="h-3 w-3" />{post.likes}</span>
-                  <span className="flex items-center gap-1"><MessageSquare className="h-3 w-3" />{post.comments}</span>
+                  <span className="flex items-center gap-1">
+                    <ThumbsUp className="h-3 w-3" />
+                    {post.likes}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <MessageSquare className="h-3 w-3" />
+                    {post.comments}
+                  </span>
                 </div>
               </CardContent>
             </Card>
@@ -133,32 +346,140 @@ export function CommunityTableSection() {
         </div>
       )}
 
+      {/* Pagination */}
+      {!isLoading && !isError && (
+        <div className="flex items-center justify-between pt-2">
+          <p className="text-sm text-muted-foreground">
+            {t("common.pagination.total", { total })}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+            >
+              {t("common.pagination.prev", "이전")}
+            </Button>
+            <span className="text-sm">
+              {page} / {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+            >
+              {t("common.pagination.next", "다음")}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Detail Sheet */}
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetContent className="w-full overflow-y-auto sm:max-w-md">
           <SheetHeader>
             <SheetTitle>{t("community.detail.title")}</SheetTitle>
-            <SheetDescription>{t("community.detail.description")}</SheetDescription>
+            <SheetDescription>
+              {t("community.detail.description")}
+            </SheetDescription>
           </SheetHeader>
-          {selectedPost && (
+
+          {isDetailLoading ? (
+            <div className="py-12 text-center text-sm text-muted-foreground">
+              {t("common.loading", "불러오는 중...")}
+            </div>
+          ) : postDetail ? (
             <div className="space-y-6 py-6">
+              {/* Meta */}
               <div className="space-y-2">
-                <Badge>{t(CATEGORY_LABEL_KEY[selectedPost.category])}</Badge>
-                <h3 className="text-xl font-bold">{selectedPost.title}</h3>
-                <p className="pt-1 text-sm text-muted-foreground">{t("community.detail.meta", { author: selectedPost.author, date: selectedPost.createdAt })}</p>
+                <Badge variant={getCategoryVariant(postDetail.category)}>
+                  {postDetail.category}
+                </Badge>
+                <h3 className="text-xl font-bold">{postDetail.title}</h3>
+                <p className="pt-1 text-sm text-muted-foreground">
+                  {t("community.detail.meta", {
+                    author: postDetail.author,
+                    date: formatDate(postDetail.createdAt),
+                  })}
+                </p>
               </div>
-              <div className="min-h-[150px] rounded-lg border bg-muted/30 p-4 text-sm">{t("community.detail.mockBody")}</div>
+
+              {/* Content */}
+              <div className="min-h-[150px] rounded-lg border bg-muted/30 p-4 text-sm whitespace-pre-wrap">
+                {postDetail.content ??
+                  t("community.detail.noContent", "내용 없음")}
+              </div>
+
+              {/* Stats */}
               <div className="flex gap-4 rounded-lg border bg-card p-4">
-                <div className="flex flex-1 flex-col items-center"><span className="text-2xl font-bold">{selectedPost.likes}</span><span className="mt-1 text-xs uppercase tracking-widest text-muted-foreground">{t("community.table.likes")}</span></div>
+                <div className="flex flex-1 flex-col items-center">
+                  <span className="text-2xl font-bold">
+                    {postDetail.likes ?? 0}
+                  </span>
+                  <span className="mt-1 text-xs uppercase tracking-widest text-muted-foreground">
+                    {t("community.table.likes")}
+                  </span>
+                </div>
                 <div className="w-px bg-border" />
-                <div className="flex flex-1 flex-col items-center"><span className="text-2xl font-bold">{selectedPost.comments}</span><span className="mt-1 text-xs uppercase tracking-widest text-muted-foreground">{t("community.table.comments")}</span></div>
+                <div className="flex flex-1 flex-col items-center">
+                  <span className="text-2xl font-bold">
+                    {postDetail.comments}
+                  </span>
+                  <span className="mt-1 text-xs uppercase tracking-widest text-muted-foreground">
+                    {t("community.table.comments")}
+                  </span>
+                </div>
+                <div className="w-px bg-border" />
+                <div className="flex flex-1 flex-col items-center">
+                  <span className="text-2xl font-bold">
+                    {postDetail.reportCount}
+                  </span>
+                  <span className="mt-1 text-xs uppercase tracking-widest text-muted-foreground">
+                    {t("community.detail.reports", "신고")}
+                  </span>
+                </div>
               </div>
-              <div className="flex justify-end pt-4">
-                <Button variant="destructive" onClick={() => { toast.warning(t("community.feedback.forceDeleted")); setIsSheetOpen(false); }}>
-                  {t("community.menu.deletePost")}
-                </Button>
+
+              {/* Actions */}
+              <div className="flex justify-end gap-2 pt-4">
+                <ConfirmAction
+                  title={t("community.confirm.hideTitle", "게시글 숨김 처리")}
+                  description={t(
+                    "community.confirm.hideDescription",
+                    "이 커뮤니티 게시글을 숨김 처리하시겠습니까?",
+                  )}
+                  confirmLabel={t("community.menu.hidePost", "숨김 처리")}
+                  cancelLabel={t("common.actions.cancel", "취소")}
+                  onConfirm={() => {
+                    if (selectedPostId) mutateHide(selectedPostId);
+                  }}
+                >
+                  <Button variant="outline">
+                    {t("community.menu.hidePost", "숨김 처리")}
+                  </Button>
+                </ConfirmAction>
+                <ConfirmAction
+                  title={t("community.confirm.deleteTitle", "게시글 삭제")}
+                  description={t(
+                    "community.confirm.deleteDescription",
+                    "이 커뮤니티 게시글을 삭제하시겠습니까? 이 작업은 되돌리기 어렵습니다.",
+                  )}
+                  confirmLabel={t("community.menu.deletePost")}
+                  cancelLabel={t("common.actions.cancel", "취소")}
+                  destructive
+                  onConfirm={() => {
+                    if (selectedPostId) mutateDelete(selectedPostId);
+                  }}
+                >
+                  <Button variant="destructive">
+                    {t("community.menu.deletePost")}
+                  </Button>
+                </ConfirmAction>
               </div>
             </div>
-          )}
+          ) : null}
         </SheetContent>
       </Sheet>
     </div>

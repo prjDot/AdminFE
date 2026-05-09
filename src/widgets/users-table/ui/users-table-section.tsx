@@ -1,21 +1,21 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ColumnDef } from "@tanstack/react-table";
 import {
-  Calendar,
+  Download,
   Filter,
   LayoutGrid,
   List,
-  Mail,
   MoreHorizontal,
   Search,
-  ShieldAlert,
-  User as UserIcon,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { queryKeys } from "@/shared/api/query-keys";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
-import { Card, CardContent, CardHeader } from "@/shared/ui/card";
+import { ConfirmAction } from "@/shared/ui/confirm-action";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,112 +32,246 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/ui/select";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/shared/ui/sheet";
 import { ToggleGroup, ToggleGroupItem } from "@/shared/ui/toggle-group";
+import {
+  type AdminUserListItem,
+  type AdminUserListParams,
+  exportUsersCSV,
+  fetchUserDetail,
+  fetchUsers,
+  suspendUser,
+  unsuspendUser,
+} from "@/features/users/api/users-api";
 import { DataTable } from "@/widgets/data-table/ui/data-table";
+import { UserDetailSheet } from "./user-detail-sheet";
+import { UsersGrid } from "./users-grid";
+import { getStatusVariant, isUserSuspended } from "./user-table-utils";
 
-type UserStatus = "ACTIVE" | "INACTIVE" | "SUSPENDED";
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  status: UserStatus;
-  createdAt: string;
-}
-
-const USER_STATUS_LABEL_KEY: Record<UserStatus, string> = {
-  ACTIVE: "common.status.active",
-  INACTIVE: "common.status.inactive",
-  SUSPENDED: "common.status.suspended",
-};
-
-const mockUsers: User[] = [
-  { id: "U001", name: "Alice Smith", email: "alice@example.com", role: "User", status: "ACTIVE", createdAt: "2026-01-10" },
-  { id: "U002", name: "Bob Jones", email: "bob@example.com", role: "User", status: "SUSPENDED", createdAt: "2026-02-15" },
-  { id: "U003", name: "Charlie Brown", email: "charlie@example.com", role: "Community Manager", status: "ACTIVE", createdAt: "2026-03-01" },
-  { id: "U004", name: "Diana Prince", email: "diana@example.com", role: "User", status: "INACTIVE", createdAt: "2026-03-20" },
-  { id: "U005", name: "Evan Wright", email: "evan@example.com", role: "User", status: "ACTIVE", createdAt: "2026-03-25" },
-  { id: "U006", name: "Fiona Gallagher", email: "fiona@example.com", role: "Moderator", status: "ACTIVE", createdAt: "2026-04-02" },
-];
+const PAGE_SIZE = 20;
 
 export function UsersTableSection() {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
+
+  const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
-  const filteredUsers = useMemo(() => {
-    return mockUsers.filter((user) => {
-      const matchesSearch =
-        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = statusFilter === "ALL" || user.status === statusFilter;
-      return matchesSearch && matchesStatus;
-    });
+  useEffect(() => {
+    setPage(1);
   }, [searchTerm, statusFilter]);
 
-  const openUserProfile = (user: User) => {
-    setSelectedUser(user);
+  const queryParams = useMemo<AdminUserListParams>(
+    () => ({
+      page,
+      pageSize: PAGE_SIZE,
+      ...(searchTerm.trim() ? { query: searchTerm.trim() } : {}),
+      ...(statusFilter !== "ALL" ? { status: statusFilter } : {}),
+    }),
+    [page, searchTerm, statusFilter],
+  );
+
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: queryKeys.users.list(queryParams),
+    queryFn: () => fetchUsers(queryParams),
+  });
+
+  const { data: userDetail, isLoading: isDetailLoading } = useQuery({
+    queryKey: queryKeys.users.detail(selectedUserId ?? ""),
+    queryFn: () => fetchUserDetail(selectedUserId!),
+    enabled: !!selectedUserId,
+  });
+
+  const items = data?.items ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  const { mutate: mutateSuspend } = useMutation({
+    mutationFn: (userId: string) => suspendUser(userId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["users"] });
+    },
+  });
+
+  const { mutate: mutateUnsuspend } = useMutation({
+    mutationFn: (userId: string) => unsuspendUser(userId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["users"] });
+    },
+  });
+
+  const openUserProfile = useCallback((user: AdminUserListItem) => {
+    setSelectedUserId(user.id);
     setIsProfileOpen(true);
+  }, []);
+
+  const handleExportCSV = async () => {
+    try {
+      const blob = await exportUsersCSV({
+        ...(searchTerm.trim() ? { query: searchTerm.trim() } : {}),
+        ...(statusFilter !== "ALL" ? { status: statusFilter } : {}),
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "users.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error(
+        t("users.feedback.exportError", "CSV 다운로드에 실패했습니다."),
+      );
+    }
   };
 
-  const columns = useMemo<ColumnDef<User>[]>(
+  const handleSuspend = useCallback(
+    (user: AdminUserListItem) => {
+      mutateSuspend(user.id, {
+        onSuccess: () =>
+          toast.warning(t("users.feedback.suspended", { name: user.name })),
+        onError: () =>
+          toast.error(
+            t("users.feedback.suspendError", "정지 처리에 실패했습니다."),
+          ),
+      });
+    },
+    [mutateSuspend, t],
+  );
+
+  const handleUnsuspend = useCallback(
+    (user: AdminUserListItem) => {
+      mutateUnsuspend(user.id, {
+        onSuccess: () =>
+          toast.success(t("users.feedback.unsuspended", { name: user.name })),
+        onError: () =>
+          toast.error(
+            t("users.feedback.unsuspendError", "정지 해제에 실패했습니다."),
+          ),
+      });
+    },
+    [mutateUnsuspend, t],
+  );
+
+  const columns = useMemo<ColumnDef<AdminUserListItem>[]>(
     () => [
-      { accessorKey: "name", header: t("users.table.name"), cell: ({ row }) => <div className="font-medium">{row.getValue("name")}</div> },
-      { accessorKey: "email", header: t("users.table.email") },
-      { accessorKey: "role", header: t("users.table.role"), cell: ({ row }) => <Badge variant="outline">{String(row.getValue("role"))}</Badge> },
+      {
+        accessorKey: "name",
+        header: t("users.table.name"),
+        cell: ({ row }) => (
+          <div className="font-medium">{row.getValue("name")}</div>
+        ),
+      },
+      {
+        accessorKey: "email",
+        header: t("users.table.email"),
+      },
+      {
+        accessorKey: "role",
+        header: t("users.table.role"),
+        cell: ({ row }) => (
+          <Badge variant="outline">{String(row.getValue("role"))}</Badge>
+        ),
+      },
       {
         accessorKey: "status",
         header: t("users.table.status"),
         cell: ({ row }) => {
-          const status = row.getValue("status") as UserStatus;
-          const variant = status === "ACTIVE" ? "default" : status === "SUSPENDED" ? "destructive" : "secondary";
-          return <Badge variant={variant}>{t(USER_STATUS_LABEL_KEY[status])}</Badge>;
+          const status = row.getValue("status") as string;
+          return (
+            <Badge variant={getStatusVariant(status)}>
+              {t(`common.status.${status.toLowerCase()}`, status)}
+            </Badge>
+          );
         },
       },
-      { accessorKey: "createdAt", header: t("users.table.joined") },
+      {
+        accessorKey: "createdAt",
+        header: t("users.table.joined"),
+        cell: ({ row }) => formatDate(row.getValue("createdAt")),
+      },
+      {
+        accessorKey: "lastLoginAt",
+        header: t("users.table.lastLogin", "마지막 로그인"),
+        cell: ({ row }) => formatDate(row.getValue("lastLoginAt")),
+      },
       {
         id: "actions",
         cell: ({ row }) => {
           const user = row.original;
+          const suspended = isUserSuspended(user.status);
+
           return (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-8 w-8 p-0" onClick={(event) => event.stopPropagation()}>
+                <Button
+                  variant="ghost"
+                  className="h-8 w-8 p-0"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <span className="sr-only">{t("users.table.openMenu")}</span>
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" onClick={(event) => event.stopPropagation()}>
+              <DropdownMenuContent
+                align="end"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <DropdownMenuLabel>{t("users.menu.actions")}</DropdownMenuLabel>
                 <DropdownMenuItem
-                  onClick={() => {
-                    void navigator.clipboard.writeText(user.id);
-                    toast.success(t("users.feedback.copiedUserId"));
-                  }}
+                  onClick={() =>
+                    copyUserId(user.id, t("users.feedback.copiedUserId"))
+                  }
                 >
                   {t("users.menu.copyUserId")}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => openUserProfile(user)}>{t("users.menu.viewProfile")}</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => toast.info(t("users.feedback.changeRoleQueued", { name: user.name }))}>
-                  {t("users.menu.changeRole")}
+                <DropdownMenuItem onClick={() => openUserProfile(user)}>
+                  {t("users.menu.viewProfile")}
                 </DropdownMenuItem>
-                {user.status === "SUSPENDED" ? (
-                  <DropdownMenuItem onClick={() => toast.success(t("users.feedback.unsuspended", { name: user.name }))}>
-                    {t("users.menu.unsuspend")}
-                  </DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem
-                    className="text-destructive focus:bg-destructive focus:text-destructive-foreground"
-                    onClick={() => toast.warning(t("users.feedback.suspended", { name: user.name }))}
+                {suspended ? (
+                  <ConfirmAction
+                    title={t(
+                      "users.confirm.unsuspendTitle",
+                      "사용자 정지 해제",
+                    )}
+                    description={t(
+                      "users.confirm.unsuspendDescription",
+                      "이 사용자의 정지 상태를 해제하시겠습니까?",
+                    )}
+                    confirmLabel={t("users.menu.unsuspend", "사용자 정지 해제")}
+                    cancelLabel={t("common.actions.cancel", "취소")}
+                    onConfirm={() => handleUnsuspend(user)}
                   >
-                    {t("users.menu.suspend")}
-                  </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={(event) => event.preventDefault()}
+                    >
+                      {t("users.menu.unsuspend", "사용자 정지 해제")}
+                    </DropdownMenuItem>
+                  </ConfirmAction>
+                ) : (
+                  <ConfirmAction
+                    title={t("users.confirm.suspendTitle", "사용자 정지")}
+                    description={t(
+                      "users.confirm.suspendDescription",
+                      "이 사용자를 정지 처리하시겠습니까? 관리자 권한이 필요한 작업입니다.",
+                    )}
+                    confirmLabel={t("users.menu.suspend", "사용자 정지")}
+                    cancelLabel={t("common.actions.cancel", "취소")}
+                    destructive
+                    onConfirm={() => handleSuspend(user)}
+                  >
+                    <DropdownMenuItem
+                      className="text-destructive focus:bg-destructive focus:text-destructive-foreground"
+                      onSelect={(event) => event.preventDefault()}
+                    >
+                      {t("users.menu.suspend", "사용자 정지")}
+                    </DropdownMenuItem>
+                  </ConfirmAction>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
@@ -145,7 +279,7 @@ export function UsersTableSection() {
         },
       },
     ],
-    [t]
+    [handleSuspend, handleUnsuspend, openUserProfile, t],
   );
 
   return (
@@ -158,9 +292,10 @@ export function UsersTableSection() {
             placeholder={t("users.searchPlaceholder")}
             className="bg-card pl-9"
             value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
+
         <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start">
           <Filter className="h-4 w-4 text-muted-foreground" />
           <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -168,13 +303,22 @@ export function UsersTableSection() {
               <SelectValue placeholder={t("users.filters.allStatus")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ALL">{t("users.filters.allStatus")}</SelectItem>
-              <SelectItem value="ACTIVE">{t("common.status.active")}</SelectItem>
-              <SelectItem value="INACTIVE">{t("common.status.inactive")}</SelectItem>
-              <SelectItem value="SUSPENDED">{t("common.status.suspended")}</SelectItem>
+              {STATUS_FILTERS.map(({ value, labelKey, fallback }) => (
+                <SelectItem key={value} value={value}>
+                  {t(labelKey, fallback)}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
-          <ToggleGroup type="single" value={viewMode} onValueChange={(value: string) => value && setViewMode(value as "list" | "grid")} className="rounded-md border bg-card sm:ml-2">
+
+          <ToggleGroup
+            type="single"
+            value={viewMode}
+            onValueChange={(value: string) =>
+              value && setViewMode(value as "list" | "grid")
+            }
+            className="rounded-md border bg-card sm:ml-2"
+          >
             <ToggleGroupItem value="list" aria-label={t("common.view.list")}>
               <List className="h-4 w-4" />
             </ToggleGroupItem>
@@ -182,71 +326,162 @@ export function UsersTableSection() {
               <LayoutGrid className="h-4 w-4" />
             </ToggleGroupItem>
           </ToggleGroup>
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1"
+            onClick={() => {
+              void handleExportCSV();
+            }}
+          >
+            <Download className="h-4 w-4" />
+            {t("users.exportCsv", "CSV")}
+          </Button>
         </div>
       </div>
 
-      {viewMode === "list" ? (
-        <DataTable columns={columns} data={filteredUsers} onRowClick={openUserProfile} />
-      ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredUsers.length > 0 ? (
-            filteredUsers.map((user) => (
-              <Card key={user.id} className="cursor-pointer transition-all hover:-translate-y-1 hover:border-primary/50 hover:shadow-md" onClick={() => openUserProfile(user)}>
-                <CardHeader className="flex flex-row items-center justify-between border-b bg-muted/20 pb-2">
-                  <div className="flex items-center gap-2">
-                    <div className="rounded-full bg-primary/10 p-2">
-                      <UserIcon className="h-4 w-4 text-primary" />
-                    </div>
-                    <div className="w-32 truncate font-semibold">{user.name}</div>
-                  </div>
-                  <Badge variant={user.status === "ACTIVE" ? "default" : user.status === "SUSPENDED" ? "destructive" : "secondary"}>
-                    {t(USER_STATUS_LABEL_KEY[user.status])}
-                  </Badge>
-                </CardHeader>
-                <CardContent className="space-y-2 pt-4 text-sm">
-                  <div className="flex items-center justify-between text-muted-foreground">
-                    <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{t("users.table.email")}</span>
-                    <span className="w-32 truncate text-right">{user.email}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-muted-foreground">
-                    <span className="flex items-center gap-1"><ShieldAlert className="h-3 w-3" />{t("users.table.role")}</span>
-                    <Badge variant="outline" className="max-w-[150px] truncate font-normal">{user.role}</Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
+      {isLoading && <UsersLoadingState />}
+      {isError && <UsersErrorState error={error} />}
+
+      {!isLoading && !isError && (
+        <>
+          {viewMode === "list" ? (
+            <DataTable
+              columns={columns}
+              data={items}
+              onRowClick={openUserProfile}
+            />
           ) : (
-            <div className="col-span-full rounded-xl border bg-card py-12 text-center text-muted-foreground">{t("table.noResults")}</div>
+            <UsersGrid
+              items={items}
+              onUserClick={openUserProfile}
+              statusLabel={(status) =>
+                t(`common.status.${status.toLowerCase()}`, status)
+              }
+              emptyLabel={t("table.noResults")}
+              emailLabel={t("users.table.email")}
+              roleLabel={t("users.table.role")}
+            />
           )}
-        </div>
+
+          <UsersPagination
+            page={page}
+            total={total}
+            totalPages={totalPages}
+            onPrevious={() => setPage((p) => p - 1)}
+            onNext={() => setPage((p) => p + 1)}
+          />
+        </>
       )}
 
-      <Sheet open={isProfileOpen} onOpenChange={setIsProfileOpen}>
-        <SheetContent className="w-full overflow-y-auto sm:max-w-md">
-          <SheetHeader>
-            <SheetTitle>{t("users.profile.title")}</SheetTitle>
-            <SheetDescription>{t("users.profile.description")}</SheetDescription>
-          </SheetHeader>
-          {selectedUser && (
-            <div className="space-y-6 py-6">
-              <div className="flex items-center gap-4">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-                  <UserIcon className="h-8 w-8 text-primary" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold">{selectedUser.name}</h3>
-                  <Badge variant={selectedUser.status === "ACTIVE" ? "default" : "destructive"} className="mt-1">{t(USER_STATUS_LABEL_KEY[selectedUser.status])}</Badge>
-                </div>
-              </div>
-              <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
-                <div className="flex items-center gap-3 text-sm"><Mail className="h-4 w-4 text-muted-foreground" />{selectedUser.email}</div>
-                <div className="flex items-center gap-3 text-sm"><ShieldAlert className="h-4 w-4 text-muted-foreground" />{selectedUser.role}</div>
-                <div className="flex items-center gap-3 text-sm"><Calendar className="h-4 w-4 text-muted-foreground" />{t("users.profile.joinedAt", { date: selectedUser.createdAt })}</div>
-              </div>
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
+      <UserDetailSheet
+        open={isProfileOpen}
+        onOpenChange={setIsProfileOpen}
+        userDetail={userDetail}
+        isLoading={isDetailLoading}
+      />
     </div>
   );
 }
+
+function formatDate(value: unknown) {
+  return typeof value === "string" && value
+    ? new Date(value).toLocaleDateString("ko-KR")
+    : "-";
+}
+
+function copyUserId(userId: string, successMessage: string) {
+  void navigator.clipboard.writeText(userId);
+  toast.success(successMessage);
+}
+
+function UsersLoadingState() {
+  const { t } = useTranslation();
+
+  return (
+    <div className="flex items-center justify-center rounded-xl border bg-card py-16">
+      <span className="animate-pulse text-muted-foreground">
+        {t("common.loading", "로딩 중...")}
+      </span>
+    </div>
+  );
+}
+
+function UsersErrorState({ error }: { error: unknown }) {
+  const { t } = useTranslation();
+
+  return (
+    <div className="rounded-xl border border-destructive/50 bg-destructive/10 px-4 py-6 text-center text-sm text-destructive">
+      {error instanceof Error
+        ? error.message
+        : t("common.error.generic", "데이터를 불러오는 데 실패했습니다.")}
+    </div>
+  );
+}
+
+interface UsersPaginationProps {
+  page: number;
+  total: number;
+  totalPages: number;
+  onPrevious: () => void;
+  onNext: () => void;
+}
+
+function UsersPagination({
+  page,
+  total,
+  totalPages,
+  onPrevious,
+  onNext,
+}: UsersPaginationProps) {
+  const { t } = useTranslation();
+
+  return (
+    <div className="flex items-center justify-between px-2 py-2">
+      <span className="text-sm text-muted-foreground">
+        총 {total}명 &middot; {page} / {totalPages} 페이지
+      </span>
+      <div className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onPrevious}
+          disabled={page <= 1}
+        >
+          {t("common.actions.previous", "이전")}
+        </Button>
+        <span className="min-w-12 text-center text-sm tabular-nums">
+          {page} / {totalPages}
+        </span>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onNext}
+          disabled={page >= totalPages}
+        >
+          {t("common.actions.next", "다음")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+const STATUS_FILTERS = [
+  { value: "ALL", labelKey: "users.filters.allStatus", fallback: "전체" },
+  { value: "ACTIVE", labelKey: "common.status.active", fallback: "활성" },
+  { value: "NORMAL", labelKey: "common.status.normal", fallback: "정상" },
+  {
+    value: "SUSPENDED",
+    labelKey: "common.status.suspended",
+    fallback: "정지",
+  },
+  { value: "BANNED", labelKey: "common.status.banned", fallback: "차단" },
+  { value: "STOPPED", labelKey: "common.status.stopped", fallback: "중지" },
+  {
+    value: "WITHDRAWN",
+    labelKey: "common.status.withdrawn",
+    fallback: "탈퇴",
+  },
+  { value: "DELETED", labelKey: "common.status.deleted", fallback: "삭제" },
+];
