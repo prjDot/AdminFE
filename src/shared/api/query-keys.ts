@@ -24,5 +24,19 @@ export const queryKeys = {
     reporters: (reportId: string) =>
       ["reports", "reporters", reportId] as const,
   },
+  notifications: {
+    history: (params?: unknown) =>
+      ["notifications", "history", params] as const,
+  },
+  services: {
+    overview: () => ["services", "overview"] as const,
+    detail: (serviceId: string) => ["services", "detail", serviceId] as const,
+    logs: (serviceId: string, params?: unknown) =>
+      ["services", "logs", serviceId, params] as const,
+  },
+  integrations: {
+    overview: () => ["integrations", "overview"] as const,
+    detail: (key: string) => ["integrations", "detail", key] as const,
+  },
   stats: () => ["stats"] as const,
 };

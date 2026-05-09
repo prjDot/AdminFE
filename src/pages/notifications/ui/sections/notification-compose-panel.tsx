@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useForm } from "react-hook-form";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
+import { useSendNotification } from "@/pages/notifications/api/notification-hooks";
 
 interface NotificationFormValues {
   target: "all" | "active" | "specific";
@@ -15,7 +16,10 @@ interface NotificationComposePanelProps {
   onSendError: () => void;
 }
 
-export function NotificationComposePanel({ onSendSuccess, onSendError }: NotificationComposePanelProps) {
+export function NotificationComposePanel({
+  onSendSuccess,
+  onSendError,
+}: NotificationComposePanelProps) {
   const { t } = useTranslation();
   const { register, handleSubmit, reset } = useForm<NotificationFormValues>({
     defaultValues: {
@@ -25,10 +29,17 @@ export function NotificationComposePanel({ onSendSuccess, onSendError }: Notific
     },
   });
 
-  const onSubmit = handleSubmit(async () => {
+  const sendMutation = useSendNotification();
+
+  const onSubmit = handleSubmit(async (data) => {
     try {
-      onSendSuccess();
+      await sendMutation.mutateAsync({
+        target: data.target,
+        title: data.title,
+        body: data.body,
+      });
       reset();
+      onSendSuccess();
     } catch {
       onSendError();
     }
@@ -38,26 +49,40 @@ export function NotificationComposePanel({ onSendSuccess, onSendError }: Notific
     <div className="space-y-6 rounded-xl border bg-card p-6 shadow-sm lg:col-span-1">
       <div className="flex items-center gap-2 border-b pb-4">
         <BellRing className="h-5 w-5 text-primary" />
-        <h2 className="text-xl font-semibold">{t("notifications.sendCardTitle")}</h2>
+        <h2 className="text-xl font-semibold">
+          {t("notifications.sendCardTitle")}
+        </h2>
       </div>
       <form onSubmit={onSubmit} className="space-y-4">
         <label className="space-y-2">
-          <span className="text-sm font-medium">{t("notifications.targetAudience")}</span>
+          <span className="text-sm font-medium">
+            {t("notifications.targetAudience")}
+          </span>
           <select
             {...register("target")}
             className="h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
           >
             <option value="all">{t("notifications.targetAll")}</option>
             <option value="active">{t("notifications.targetActive")}</option>
-            <option value="specific">{t("notifications.targetSpecific")}</option>
+            <option value="specific">
+              {t("notifications.targetSpecific")}
+            </option>
           </select>
         </label>
         <label className="space-y-2">
-          <span className="text-sm font-medium">{t("notifications.titleField")}</span>
-          <Input {...register("title")} placeholder={t("notifications.titlePlaceholder")} required />
+          <span className="text-sm font-medium">
+            {t("notifications.titleField")}
+          </span>
+          <Input
+            {...register("title")}
+            placeholder={t("notifications.titlePlaceholder")}
+            required
+          />
         </label>
         <label className="space-y-2">
-          <span className="text-sm font-medium">{t("notifications.messageBody")}</span>
+          <span className="text-sm font-medium">
+            {t("notifications.messageBody")}
+          </span>
           <textarea
             {...register("body")}
             placeholder={t("notifications.messagePlaceholder")}
@@ -65,8 +90,15 @@ export function NotificationComposePanel({ onSendSuccess, onSendError }: Notific
             required
           />
         </label>
-        <Button type="submit" className="w-full gap-2">
-          <Send className="h-4 w-4" /> {t("common.actions.sendNotification")}
+        <Button
+          type="submit"
+          className="w-full gap-2"
+          disabled={sendMutation.isPending}
+        >
+          <Send className="h-4 w-4" />{" "}
+          {sendMutation.isPending
+            ? t("common.actions.sending")
+            : t("common.actions.sendNotification")}
         </Button>
       </form>
     </div>
