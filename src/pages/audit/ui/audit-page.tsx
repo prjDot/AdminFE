@@ -37,6 +37,7 @@ export function AuditPage() {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: queryKeys.audit.list({ page: 1, pageSize: 100 }),
     queryFn: () => fetchAuditLogs({ page: 1, pageSize: 100 }),
+    staleTime: 30_000,
   });
   const logs = useMemo(() => data?.items.map(toAuditRow) ?? [], [data]);
 

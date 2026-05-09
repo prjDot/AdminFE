@@ -13,8 +13,8 @@ export function useIntegrationsOverview() {
   return useQuery({
     queryKey: queryKeys.integrations.overview(),
     queryFn: fetchIntegrationsOverview,
-    staleTime: 30_000,
-    refetchInterval: 60_000,
+    staleTime: 60_000,
+    refetchInterval: 120_000,
   });
 }
 
@@ -22,8 +22,8 @@ export function useServicesOverview() {
   return useQuery({
     queryKey: queryKeys.services.overview(),
     queryFn: fetchServicesOverview,
-    staleTime: 30_000,
-    refetchInterval: 60_000,
+    staleTime: 60_000,
+    refetchInterval: 120_000,
   });
 }
 
@@ -32,7 +32,7 @@ export function useServiceLogs(serviceId: string) {
     queryKey: queryKeys.services.logs(serviceId),
     queryFn: () => fetchServiceLogs(serviceId),
     enabled: Boolean(serviceId),
-    staleTime: 10_000,
+    staleTime: 30_000,
   });
 }
 

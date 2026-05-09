@@ -55,6 +55,7 @@ export function useSendNotification() {
 export function useNotificationHistory(params?: NotificationHistoryParams) {
   return useQuery({
     queryKey: queryKeys.notifications.history(params),
+    staleTime: 30_000,
     queryFn: async () => {
       const res = await apiClient.get<ApiResponse<NotificationHistoryResponse>>(
         "/admin/notifications/history",

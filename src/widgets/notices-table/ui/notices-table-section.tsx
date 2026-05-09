@@ -86,12 +86,14 @@ export function NoticesTableSection({
   const { data, isLoading, isError, error } = useQuery({
     queryKey: queryKeys.notices.list(queryParams),
     queryFn: () => fetchNotices(queryParams),
+    staleTime: 30_000,
   });
 
   const { data: noticeDetail, isLoading: isDetailLoading } = useQuery({
     queryKey: queryKeys.notices.detail(selectedNoticeId ?? ""),
     queryFn: () => fetchNoticeDetail(selectedNoticeId!),
     enabled: !!selectedNoticeId,
+    staleTime: 2 * 60_000,
   });
 
   const items = data?.items ?? [];

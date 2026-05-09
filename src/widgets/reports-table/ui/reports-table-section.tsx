@@ -69,18 +69,21 @@ export function ReportsTableSection() {
   const { data, isLoading, isError, error } = useQuery({
     queryKey: queryKeys.reports.list(queryParams),
     queryFn: () => fetchReports(queryParams),
+    staleTime: 30_000,
   });
 
   const { data: reportDetail, isLoading: isDetailLoading } = useQuery({
     queryKey: queryKeys.reports.detail(selectedReportId ?? ""),
     queryFn: () => fetchReportDetail(selectedReportId!),
     enabled: !!selectedReportId,
+    staleTime: 2 * 60_000,
   });
 
   const { data: reporters, isLoading: isReportersLoading } = useQuery({
     queryKey: queryKeys.reports.reporters(selectedReportId ?? ""),
     queryFn: () => fetchReportReporters(selectedReportId!),
     enabled: !!selectedReportId,
+    staleTime: 2 * 60_000,
   });
 
   const items = data?.items ?? [];

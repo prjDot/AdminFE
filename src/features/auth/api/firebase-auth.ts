@@ -2,8 +2,10 @@ import { initializeApp, getApps } from "firebase/app";
 import {
   getAuth,
   GoogleAuthProvider,
+  onAuthStateChanged,
   signInWithPopup,
   signOut,
+  type User,
 } from "firebase/auth";
 
 function getFirebaseConfig() {
@@ -40,6 +42,25 @@ export async function getGoogleFirebaseIdToken() {
 
   const credential = await signInWithPopup(auth, provider);
   return credential.user.getIdToken(true);
+}
+
+function waitForCurrentUser() {
+  const auth = getFirebaseAuth();
+  if (auth.currentUser) {
+    return Promise.resolve(auth.currentUser);
+  }
+
+  return new Promise<User | null>((resolve) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      unsubscribe();
+      resolve(user);
+    });
+  });
+}
+
+export async function getCurrentGoogleFirebaseIdToken() {
+  const user = await waitForCurrentUser();
+  return user ? user.getIdToken(true) : null;
 }
 
 export async function signOutFirebase() {

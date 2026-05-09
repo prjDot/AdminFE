@@ -30,21 +30,25 @@ export function DashboardPage() {
   const overviewQuery = useQuery({
     queryKey: queryKeys.dashboard.overview(),
     queryFn: getDashboardOverview,
+    staleTime: 30_000,
   });
 
   const summaryQuery = useQuery({
     queryKey: queryKeys.dashboard.summary(dateParams),
     queryFn: () => getDashboardSummary(dateParams),
+    staleTime: 30_000,
   });
 
   const timelineQuery = useQuery({
     queryKey: queryKeys.dashboard.timeline(dateParams),
     queryFn: () => getDashboardTimeline(dateParams),
+    staleTime: 30_000,
   });
 
   const prioritiesQuery = useQuery({
     queryKey: queryKeys.dashboard.priorities(),
     queryFn: getDashboardPriorities,
+    staleTime: 30_000,
   });
 
   return (

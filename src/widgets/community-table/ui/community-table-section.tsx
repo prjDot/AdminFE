@@ -19,6 +19,7 @@ import {
   updateCommunityPostVisibility,
 } from "@/features/community/api/community-api";
 import { queryKeys } from "@/shared/api/query-keys";
+import { useDebouncedValue } from "@/shared/hooks/use-debounced-value";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { ConfirmAction } from "@/shared/ui/confirm-action";
@@ -70,34 +71,37 @@ export function CommunityTableSection() {
   const [page, setPage] = useState(1);
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [query, setQuery] = useState("");
+  const debouncedQuery = useDebouncedValue(query);
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   // Reset to page 1 when search query changes
   useEffect(() => {
     setPage(1);
-  }, [query]);
+  }, [debouncedQuery]);
 
   // ── Query params ─────────────────────────────────────────────────────────────
   const queryParams = useMemo<AdminCommunityPostListParams>(
     () => ({
       page,
       pageSize: PAGE_SIZE,
-      ...(query.trim() ? { query: query.trim() } : {}),
+      ...(debouncedQuery.trim() ? { query: debouncedQuery.trim() } : {}),
     }),
-    [page, query],
+    [page, debouncedQuery],
   );
 
   // ── Queries ───────────────────────────────────────────────────────────────────
   const { data, isLoading, isError } = useQuery({
     queryKey: queryKeys.community.list(queryParams),
     queryFn: () => fetchCommunityPosts(queryParams),
+    staleTime: 30_000,
   });
 
   const { data: postDetail, isLoading: isDetailLoading } = useQuery({
     queryKey: queryKeys.community.detail(selectedPostId ?? ""),
     queryFn: () => fetchCommunityPostDetail(selectedPostId!),
     enabled: !!selectedPostId,
+    staleTime: 2 * 60_000,
   });
 
   // ── Derived values ────────────────────────────────────────────────────────────

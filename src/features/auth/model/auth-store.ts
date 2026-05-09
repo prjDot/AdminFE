@@ -13,6 +13,7 @@ import {
   verifyPasskeyRegistration,
 } from "@/features/auth/api/admin-auth-api";
 import {
+  getCurrentGoogleFirebaseIdToken,
   getGoogleFirebaseIdToken,
   signOutFirebase,
 } from "@/features/auth/api/firebase-auth";
@@ -27,9 +28,21 @@ import {
   saveStoredAdminSession,
 } from "@/shared/api/admin-session-storage";
 import {
-  ApiResponseError,
-  toApiResponseError,
-} from "@/shared/api/api-response";
+  getErrorKey,
+  getErrorMessage,
+  logAuthError,
+} from "@/features/auth/model/auth-error-utils";
+import {
+  acquirePasskeyActionLock,
+  assertPasskeyAttempt,
+  clearPasskeyActionState,
+  discardPasskeyAttempt,
+  getCredentialClientDataDebug,
+  recordPasskeyDebug,
+  releasePasskeyActionLock,
+  replacePasskeyAttempt,
+  resetPasskeyAttempt,
+} from "@/features/auth/model/passkey-auth-flow";
 import { type Role } from "@/shared/config/constants";
 
 export interface AdminUser {
@@ -71,37 +84,6 @@ interface AuthState {
   forceLogout: () => void;
 }
 
-interface PasskeyAttemptContext {
-  id: string;
-  step: Extract<AuthStep, "PASSKEY_ENROLL" | "MFA_PENDING">;
-  challengeId: string;
-  publicKey: AdminPasskeyOptionsResponse["publicKey"];
-  optionsRequestedAt: string;
-  origin: string;
-}
-
-type PasskeyDebugEvent = {
-  event: string;
-  stage?: Extract<AuthStep, "PASSKEY_ENROLL" | "MFA_PENDING">;
-  challengeId?: string;
-  optionsRequestedAt?: string;
-  verifyRequestedAt?: string;
-  origin?: string;
-  clientDataOrigin?: string;
-  clientDataType?: string;
-  apiStatus?: number;
-  apiCode?: string;
-  apiMessage?: string;
-  errorType?: string;
-  timestamp: string;
-};
-
-const PASSKEY_ACTION_LOCK_STORAGE_KEY = "paw-admin-passkey-action-lock";
-const PASSKEY_ACTION_LOCK_TTL_MS = 2 * 60 * 1000;
-
-let activePasskeyAttempt: PasskeyAttemptContext | null = null;
-let passkeyActionInFlight = false;
-
 function toAdminUser(admin: AdminAuthSessionResponse["admin"]): AdminUser {
   return {
     id: admin.id,
@@ -121,355 +103,6 @@ function persistSession(session: AdminAuthSessionResponse) {
     admin: session.admin,
     permissions: session.permissions,
   });
-}
-
-function recordPasskeyDebug(event: Omit<PasskeyDebugEvent, "timestamp">) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  const target = window as Window & {
-    __ADMIN_PASSKEY_DEBUG__?: PasskeyDebugEvent[];
-  };
-  target.__ADMIN_PASSKEY_DEBUG__ = target.__ADMIN_PASSKEY_DEBUG__ ?? [];
-  target.__ADMIN_PASSKEY_DEBUG__.push({
-    ...event,
-    timestamp: new Date().toISOString(),
-  });
-}
-
-function getApiErrorDebug(error: unknown) {
-  const normalizedError = toApiResponseError(error);
-
-  if (!(normalizedError instanceof ApiResponseError)) {
-    return {};
-  }
-
-  return {
-    apiStatus: normalizedError.status,
-    apiCode: normalizedError.code,
-    apiMessage: normalizedError.message,
-  };
-}
-
-function decodeBase64Url(value: string) {
-  const base64 = value.replace(/-/g, "+").replace(/_/g, "/");
-  const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, "=");
-  return window.atob(padded);
-}
-
-function getCredentialClientDataDebug(credential: unknown) {
-  if (
-    typeof window === "undefined" ||
-    typeof credential !== "object" ||
-    credential === null ||
-    !("response" in credential) ||
-    typeof credential.response !== "object" ||
-    credential.response === null ||
-    !("clientDataJSON" in credential.response) ||
-    typeof credential.response.clientDataJSON !== "string"
-  ) {
-    return {};
-  }
-
-  try {
-    const clientData = JSON.parse(
-      decodeBase64Url(credential.response.clientDataJSON),
-    ) as { origin?: unknown; type?: unknown };
-
-    return {
-      clientDataOrigin:
-        typeof clientData.origin === "string" ? clientData.origin : undefined,
-      clientDataType:
-        typeof clientData.type === "string" ? clientData.type : undefined,
-    };
-  } catch {
-    return {};
-  }
-}
-
-function readPasskeyActionLock() {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  const raw = window.localStorage.getItem(PASSKEY_ACTION_LOCK_STORAGE_KEY);
-  if (!raw) {
-    return null;
-  }
-
-  try {
-    const lock = JSON.parse(raw) as { ownerId?: unknown; expiresAt?: unknown };
-    if (
-      typeof lock.ownerId !== "string" ||
-      typeof lock.expiresAt !== "number"
-    ) {
-      return null;
-    }
-
-    if (lock.expiresAt <= Date.now()) {
-      window.localStorage.removeItem(PASSKEY_ACTION_LOCK_STORAGE_KEY);
-      return null;
-    }
-
-    return lock as { ownerId: string; expiresAt: number };
-  } catch {
-    window.localStorage.removeItem(PASSKEY_ACTION_LOCK_STORAGE_KEY);
-    return null;
-  }
-}
-
-function acquirePasskeyActionLock() {
-  if (passkeyActionInFlight || readPasskeyActionLock()) {
-    return null;
-  }
-
-  const ownerId = crypto.randomUUID();
-  passkeyActionInFlight = true;
-
-  if (typeof window !== "undefined") {
-    window.localStorage.setItem(
-      PASSKEY_ACTION_LOCK_STORAGE_KEY,
-      JSON.stringify({
-        ownerId,
-        expiresAt: Date.now() + PASSKEY_ACTION_LOCK_TTL_MS,
-      }),
-    );
-  }
-
-  return ownerId;
-}
-
-function releasePasskeyActionLock(ownerId: string | null) {
-  passkeyActionInFlight = false;
-
-  if (typeof window === "undefined" || !ownerId) {
-    return;
-  }
-
-  const lock = readPasskeyActionLock();
-  if (!lock || lock.ownerId === ownerId) {
-    window.localStorage.removeItem(PASSKEY_ACTION_LOCK_STORAGE_KEY);
-  }
-}
-
-function clearPasskeyActionState() {
-  activePasskeyAttempt = null;
-  passkeyActionInFlight = false;
-
-  if (typeof window !== "undefined") {
-    window.localStorage.removeItem(PASSKEY_ACTION_LOCK_STORAGE_KEY);
-  }
-}
-
-function replacePasskeyAttempt(
-  step: Extract<AuthStep, "PASSKEY_ENROLL" | "MFA_PENDING">,
-  options: AdminPasskeyOptionsResponse,
-) {
-  const optionsRequestedAt = new Date().toISOString();
-  activePasskeyAttempt = {
-    id: crypto.randomUUID(),
-    step,
-    challengeId: options.challengeId,
-    publicKey: options.publicKey,
-    optionsRequestedAt,
-    origin: window.location.origin,
-  };
-
-  recordPasskeyDebug({
-    event: "options",
-    stage: step,
-    challengeId: activePasskeyAttempt.challengeId,
-    optionsRequestedAt,
-    origin: activePasskeyAttempt.origin,
-  });
-
-  return activePasskeyAttempt;
-}
-
-function discardPasskeyAttempt(event: string, error?: unknown) {
-  recordPasskeyDebug({
-    event,
-    stage: activePasskeyAttempt?.step,
-    challengeId: activePasskeyAttempt?.challengeId,
-    optionsRequestedAt: activePasskeyAttempt?.optionsRequestedAt,
-    origin: window.location.origin,
-    errorType: error instanceof Error ? error.name : undefined,
-    ...getApiErrorDebug(error),
-  });
-  activePasskeyAttempt = null;
-}
-
-function assertPasskeyAttempt(attempt: PasskeyAttemptContext) {
-  if (
-    !activePasskeyAttempt ||
-    activePasskeyAttempt.id !== attempt.id ||
-    activePasskeyAttempt.challengeId !== attempt.challengeId
-  ) {
-    throw new Error("PASSKEY_CHALLENGE_CONTEXT_STALE");
-  }
-
-  if (attempt.origin !== window.location.origin) {
-    throw new Error("PASSKEY_ORIGIN_CHANGED");
-  }
-}
-
-function getErrorKey(error: unknown) {
-  const normalizedError = toApiResponseError(error);
-
-  if (
-    normalizedError instanceof Error &&
-    normalizedError.message === "FIREBASE_CONFIG_MISSING"
-  ) {
-    return "auth.errors.firebaseConfigMissing";
-  }
-
-  if (normalizedError instanceof ApiResponseError) {
-    if (
-      normalizedError.code === "ADMIN_SESSION_REQUIRED" ||
-      normalizedError.code === "UNAUTHORIZED"
-    ) {
-      return "auth.errors.adminAccessTokenMissing";
-    }
-
-    if (
-      normalizedError.code === "ADMIN_ONLY" ||
-      normalizedError.code === "GOOGLE_SIGN_IN_REQUIRED"
-    ) {
-      return "auth.errors.adminForbidden";
-    }
-
-    if (normalizedError.code === "PASSKEY_CHALLENGE_INVALID") {
-      return "auth.errors.passkeyChallengeInvalid";
-    }
-
-    if (normalizedError.code === "PASSKEY_INVALID") {
-      return "auth.errors.passkeyInvalid";
-    }
-
-    if (normalizedError.code === "ADMIN_AUTH_STEP_INVALID") {
-      return "auth.errors.passkeyFlowInvalid";
-    }
-  }
-
-  if (normalizedError instanceof DOMException) {
-    if (normalizedError.name === "SecurityError") {
-      return "auth.errors.passkeyRpIdMismatch";
-    }
-
-    if (normalizedError.name === "NotAllowedError") {
-      return "auth.errors.passkeyCancelled";
-    }
-
-    if (normalizedError.name === "InvalidStateError") {
-      return "auth.errors.passkeyAlreadyRegistered";
-    }
-  }
-
-  if (
-    normalizedError instanceof Error &&
-    normalizedError.message === "PASSKEY_CREDENTIAL_MISSING"
-  ) {
-    return "auth.errors.passkeyCredentialMissing";
-  }
-
-  if (
-    normalizedError instanceof Error &&
-    normalizedError.message === "ADMIN_ACCESS_TOKEN_MISSING"
-  ) {
-    return "auth.errors.adminAccessTokenMissing";
-  }
-
-  if (
-    normalizedError instanceof Error &&
-    normalizedError.message === "PASSKEY_ACTION_IN_PROGRESS"
-  ) {
-    return "auth.errors.passkeyActionInProgress";
-  }
-
-  if (
-    normalizedError instanceof Error &&
-    normalizedError.message === "PASSKEY_CHALLENGE_CONTEXT_STALE"
-  ) {
-    return "auth.errors.passkeyChallengeStale";
-  }
-
-  if (
-    normalizedError instanceof Error &&
-    normalizedError.message === "PASSKEY_ORIGIN_CHANGED"
-  ) {
-    return "auth.errors.passkeyOriginChanged";
-  }
-
-  if (
-    normalizedError instanceof Error &&
-    normalizedError.message === "PASSKEY_CHALLENGE_ID_MISSING"
-  ) {
-    return "auth.errors.passkeyOptionsInvalid";
-  }
-
-  if (
-    normalizedError instanceof Error &&
-    normalizedError.message === "PASSKEY_OPTIONS_INVALID"
-  ) {
-    return "auth.errors.passkeyOptionsInvalid";
-  }
-
-  if (
-    normalizedError instanceof Error &&
-    normalizedError.message === "PASSKEY_NOT_SUPPORTED"
-  ) {
-    return "auth.errors.passkeyNotSupported";
-  }
-
-  if (
-    normalizedError instanceof Error &&
-    normalizedError.message === "PASSKEY_SECURE_CONTEXT_REQUIRED"
-  ) {
-    return "auth.errors.passkeySecureContextRequired";
-  }
-
-  if (
-    normalizedError instanceof TypeError &&
-    normalizedError.message.includes(
-      "PublicKeyCredentialCreationOptions.pubKeyCredParams",
-    )
-  ) {
-    return "auth.errors.passkeyOptionsInvalid";
-  }
-
-  return "auth.errors.unexpected";
-}
-
-function getErrorMessage(error: unknown) {
-  const normalizedError = toApiResponseError(error);
-
-  if (normalizedError instanceof ApiResponseError) {
-    return [
-      normalizedError.code ? `code=${normalizedError.code}` : null,
-      `status=${normalizedError.status}`,
-      normalizedError.requestId
-        ? `requestId=${normalizedError.requestId}`
-        : null,
-      normalizedError.message,
-    ]
-      .filter(Boolean)
-      .join(" / ");
-  }
-
-  if (normalizedError instanceof DOMException) {
-    return `${normalizedError.name}: ${normalizedError.message}`;
-  }
-
-  return normalizedError instanceof Error ? normalizedError.message : undefined;
-}
-
-function logAuthError(context: string, error: unknown) {
-  if (import.meta.env.DEV && typeof reportError === "function") {
-    reportError(
-      error instanceof Error ? error : new Error(`[admin-auth] ${context}`),
-    );
-  }
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -503,12 +136,49 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return;
       }
 
+      const storedSession = readStoredAdminSession();
+      const restoredSession = {
+        accessToken: storedSession?.token ?? null,
+        expiresAt: session.expiresAt,
+        stage: session.stage,
+        admin: session.admin,
+        permissions: session.permissions,
+      };
+
+      if (
+        storedSession?.stage === "AUTHENTICATED" &&
+        session.stage === "AUTHENTICATED"
+      ) {
+        const firebaseIdToken = await getCurrentGoogleFirebaseIdToken();
+        if (!firebaseIdToken) {
+          clearStoredAdminSession();
+          set({ bootstrapped: true, step: "NONE", admin: null });
+          return;
+        }
+
+        const loginResult = await adminLogin(firebaseIdToken);
+        if (!loginResult.session) {
+          throw new Error("ADMIN_SESSION_MISSING");
+        }
+
+        persistSession(loginResult.session);
+        set({
+          bootstrapped: true,
+          step: loginResult.session.stage,
+          admin: toAdminUser(loginResult.session.admin),
+          permissions: loginResult.session.permissions,
+          expiresAt: loginResult.session.expiresAt,
+          pendingPasskey: loginResult.passkey,
+        });
+        return;
+      }
+
       set({
         bootstrapped: true,
-        step: session.stage,
-        admin: toAdminUser({ ...session.admin, role: session.admin.role }),
-        permissions: session.permissions,
-        expiresAt: session.expiresAt,
+        step: restoredSession.stage,
+        admin: toAdminUser({ ...restoredSession.admin, role: restoredSession.admin.role }),
+        permissions: restoredSession.permissions,
+        expiresAt: restoredSession.expiresAt,
         pendingPasskey: null,
       });
     } catch {
@@ -588,7 +258,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return { ok: false, messageKey: "auth.errors.passkeyActionInProgress" };
     }
 
-    activePasskeyAttempt = null;
+    resetPasskeyAttempt();
     set({ isAuthenticating: true });
 
     try {
@@ -631,7 +301,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           ? await verifyPasskeyRegistration(attempt.challengeId, credential)
           : await verifyPasskeyMfa(attempt.challengeId, credential);
 
-      activePasskeyAttempt = null;
+      resetPasskeyAttempt();
       releasePasskeyActionLock(lockOwnerId);
       persistSession(session);
       set({

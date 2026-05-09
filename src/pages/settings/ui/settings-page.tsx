@@ -34,6 +34,7 @@ export function SettingsPage() {
   const settingsQuery = useQuery({
     queryKey: queryKeys.settings.root(),
     queryFn: fetchAdminSettings,
+    staleTime: 2 * 60_000,
   });
   const updateMutation = useMutation({
     mutationFn: updateAdminSettings,

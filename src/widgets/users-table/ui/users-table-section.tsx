@@ -12,6 +12,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { queryKeys } from "@/shared/api/query-keys";
+import { useDebouncedValue } from "@/shared/hooks/use-debounced-value";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { ConfirmAction } from "@/shared/ui/confirm-action";
@@ -55,6 +56,7 @@ export function UsersTableSection() {
 
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearchTerm = useDebouncedValue(searchTerm);
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
@@ -62,27 +64,29 @@ export function UsersTableSection() {
 
   useEffect(() => {
     setPage(1);
-  }, [searchTerm, statusFilter]);
+  }, [debouncedSearchTerm, statusFilter]);
 
   const queryParams = useMemo<AdminUserListParams>(
     () => ({
       page,
       pageSize: PAGE_SIZE,
-      ...(searchTerm.trim() ? { query: searchTerm.trim() } : {}),
+      ...(debouncedSearchTerm.trim() ? { query: debouncedSearchTerm.trim() } : {}),
       ...(statusFilter !== "ALL" ? { status: statusFilter } : {}),
     }),
-    [page, searchTerm, statusFilter],
+    [page, debouncedSearchTerm, statusFilter],
   );
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: queryKeys.users.list(queryParams),
     queryFn: () => fetchUsers(queryParams),
+    staleTime: 30_000,
   });
 
   const { data: userDetail, isLoading: isDetailLoading } = useQuery({
     queryKey: queryKeys.users.detail(selectedUserId ?? ""),
     queryFn: () => fetchUserDetail(selectedUserId!),
     enabled: !!selectedUserId,
+    staleTime: 2 * 60_000,
   });
 
   const items = data?.items ?? [];
@@ -111,7 +115,7 @@ export function UsersTableSection() {
   const handleExportCSV = async () => {
     try {
       const blob = await exportUsersCSV({
-        ...(searchTerm.trim() ? { query: searchTerm.trim() } : {}),
+        ...(debouncedSearchTerm.trim() ? { query: debouncedSearchTerm.trim() } : {}),
         ...(statusFilter !== "ALL" ? { status: statusFilter } : {}),
       });
       const url = URL.createObjectURL(blob);

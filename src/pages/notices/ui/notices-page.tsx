@@ -4,11 +4,13 @@ import { useTranslation } from "react-i18next";
 import { Input } from "@/shared/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { NoticesTableSection } from "@/widgets/notices-table/ui/notices-table-section";
+import { useDebouncedValue } from "@/shared/hooks/use-debounced-value";
 
 export function NoticesPage() {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState("all"); // "all" | "LOST" | "FOUND" | "RESOLVED"
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search);
 
   return (
     <div className="mx-auto max-w-screen-xl space-y-6 p-4 sm:p-8">
@@ -53,7 +55,7 @@ export function NoticesPage() {
 
       <NoticesTableSection
         status={activeTab === "all" ? undefined : activeTab}
-        search={search}
+        search={debouncedSearch}
       />
     </div>
   );
