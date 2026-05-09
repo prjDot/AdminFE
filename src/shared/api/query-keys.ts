@@ -28,6 +28,13 @@ export const queryKeys = {
     history: (params?: unknown) =>
       ["notifications", "history", params] as const,
   },
+  audit: {
+    list: (params?: unknown) => ["audit", "list", params] as const,
+    detail: (logId: string) => ["audit", "detail", logId] as const,
+  },
+  settings: {
+    root: () => ["settings"] as const,
+  },
   services: {
     overview: () => ["services", "overview"] as const,
     detail: (serviceId: string) => ["services", "detail", serviceId] as const,

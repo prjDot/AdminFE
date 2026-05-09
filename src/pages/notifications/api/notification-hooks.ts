@@ -4,7 +4,7 @@ import { unwrapApiResponse, type ApiResponse } from "@/shared/api/api-response";
 import { queryKeys } from "@/shared/api/query-keys";
 
 export interface NotificationSendRequest {
-  target: "all" | "active" | "specific";
+  target: "all" | "active" | "specific" | "ALL" | "ACTIVE" | "SPECIFIC";
   title: string;
   body: string;
   userIds?: string[];
@@ -38,7 +38,10 @@ export function useSendNotification() {
 
   return useMutation({
     mutationFn: async (data: NotificationSendRequest) => {
-      const res = await apiClient.post("/admin/notifications/send", data);
+      const res = await apiClient.post("/admin/notifications/send", {
+        ...data,
+        target: data.target.toUpperCase(),
+      });
       return unwrapApiResponse(res);
     },
     onSuccess: () => {

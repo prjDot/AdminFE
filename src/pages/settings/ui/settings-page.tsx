@@ -1,5 +1,6 @@
 import { Save, Settings2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/shared/ui/button";
@@ -10,22 +11,47 @@ import { SettingsGeneralSection } from "@/pages/settings/ui/sections/settings-ge
 import { SettingsIntegrationSection } from "@/pages/settings/ui/sections/settings-integration-section";
 import { SettingsBaseDataSection } from "@/pages/settings/ui/sections/settings-base-data-section";
 import type { SettingsFormValues } from "@/pages/settings/ui/sections/types";
+import {
+  fetchAdminSettings,
+  updateAdminSettings,
+} from "@/pages/settings/api/settings-api";
+import { queryKeys } from "@/shared/api/query-keys";
+
+const defaultSettings: SettingsFormValues = {
+  siteName: "PawGen",
+  supportEmail: "support@pawgen.com",
+  fcmServerKey: "",
+  apiEndpoint: "https://openapi.animal.go.kr/openapi/service/rest",
+};
 
 export function SettingsPage() {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const [feedback, setFeedback] = useState<{ tone: "success" | "error"; message: string } | null>(null);
-  const { register, handleSubmit } = useForm<SettingsFormValues>({
-    defaultValues: {
-      siteName: "PawGen",
-      supportEmail: "support@pawgen.com",
-      fcmServerKey: "",
-      apiEndpoint: "https://openapi.animal.go.kr/openapi/service/rest",
+  const { register, handleSubmit, reset } = useForm<SettingsFormValues>({
+    defaultValues: defaultSettings,
+  });
+  const settingsQuery = useQuery({
+    queryKey: queryKeys.settings.root(),
+    queryFn: fetchAdminSettings,
+  });
+  const updateMutation = useMutation({
+    mutationFn: updateAdminSettings,
+    onSuccess: (settings) => {
+      queryClient.setQueryData(queryKeys.settings.root(), settings);
+      setFeedback({ tone: "success", message: t("common.feedback.saved") });
     },
   });
 
-  const onSubmit = handleSubmit(async () => {
+  useEffect(() => {
+    if (settingsQuery.data) {
+      reset({ ...defaultSettings, ...settingsQuery.data });
+    }
+  }, [reset, settingsQuery.data]);
+
+  const onSubmit = handleSubmit(async (values) => {
     try {
-      setFeedback({ tone: "success", message: t("common.feedback.saved") });
+      await updateMutation.mutateAsync(values);
     } catch {
       setFeedback({ tone: "error", message: t("common.feedback.failed") });
     }
@@ -43,6 +69,7 @@ export function SettingsPage() {
         </div>
       </div>
 
+      {settingsQuery.isError && <FormStatus tone="error" message={t("common.errors.failedToLoad")} />}
       {feedback && <FormStatus tone={feedback.tone} message={feedback.message} />}
 
       <form onSubmit={onSubmit} className="bg-card border rounded-xl shadow-sm p-6">
@@ -75,7 +102,7 @@ export function SettingsPage() {
           <Button type="button" variant="outline">
             {t("common.actions.cancel")}
           </Button>
-          <Button type="submit" className="gap-2">
+          <Button type="submit" className="gap-2" disabled={updateMutation.isPending || settingsQuery.isLoading}>
             <Save className="h-4 w-4" />
             {t("common.actions.saveChanges")}
           </Button>

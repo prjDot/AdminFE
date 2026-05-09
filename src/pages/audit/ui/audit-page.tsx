@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { type ColumnDef } from "@tanstack/react-table";
+import { useQuery } from "@tanstack/react-query";
 import { DataTable } from "@/widgets/data-table/ui/data-table";
 import { Badge } from "@/shared/ui/badge";
 import { History, LayoutGrid, List, FileText } from "lucide-react";
@@ -7,9 +8,10 @@ import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader } from "@/shared/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/shared/ui/toggle-group";
 import { toast } from "sonner";
-import { readAuditLogs } from "@/features/audit/model/audit-log-store";
+import { fetchAuditLogs, type AdminAuditLog } from "@/features/audit/api/audit-api";
+import { queryKeys } from "@/shared/api/query-keys";
 
-interface AuditLog {
+interface AuditLogRow {
   id: string;
   adminName: string;
   action: string;
@@ -18,26 +20,31 @@ interface AuditLog {
   ipAddress: string;
 }
 
-const mockLogs: AuditLog[] = [
-  { id: "A1029", adminName: "Super Admin", action: "Deleted Post", target: "Post #P001", timestamp: "2026-04-15 14:22:30", ipAddress: "192.168.1.5" },
-  { id: "A1028", adminName: "Super Admin", action: "Updated Settings", target: "System Config", timestamp: "2026-04-15 10:15:00", ipAddress: "192.168.1.5" },
-  { id: "A1027", adminName: "Jane Doe (Report Mgr)", action: "Suspended User", target: "User #U884", timestamp: "2026-04-14 16:45:12", ipAddress: "10.0.0.42" },
-  { id: "A1026", adminName: "Jane Doe (Report Mgr)", action: "Hidden Notice", target: "Notice #N004", timestamp: "2026-04-14 16:40:05", ipAddress: "10.0.0.42" },
-];
+function toAuditRow(log: AdminAuditLog): AuditLogRow {
+  return {
+    id: log.id,
+    adminName: log.adminName ?? log.adminEmail ?? "-",
+    action: log.action,
+    target: [log.targetType, log.targetId].filter(Boolean).join(" #") || "-",
+    timestamp: log.createdAt ?? log.timestamp ?? "-",
+    ipAddress: log.ipAddress ?? "-",
+  };
+}
 
 export function AuditPage() {
   const { t } = useTranslation();
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
-  const logs = useMemo(() => {
-    const dynamicLogs = readAuditLogs();
-    return [...dynamicLogs, ...mockLogs];
-  }, []);
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: queryKeys.audit.list({ page: 1, pageSize: 100 }),
+    queryFn: () => fetchAuditLogs({ page: 1, pageSize: 100 }),
+  });
+  const logs = useMemo(() => data?.items.map(toAuditRow) ?? [], [data]);
 
-  const handleRowClick = (log: AuditLog) => {
+  const handleRowClick = (log: AuditLogRow) => {
     toast.info(`${log.id} · ${log.adminName}`);
   };
 
-  const columns = useMemo<ColumnDef<AuditLog>[]>(
+  const columns = useMemo<ColumnDef<AuditLogRow>[]>(
     () => [
       {
         accessorKey: "timestamp",
@@ -98,7 +105,13 @@ export function AuditPage() {
         </ToggleGroup>
       </div>
 
-      {viewMode === "list" ? (
+      {isLoading ? (
+        <div className="rounded-md border bg-card p-8 text-center text-muted-foreground">{t("common.loading")}</div>
+      ) : isError ? (
+        <button type="button" className="rounded-md border bg-card p-8 text-center text-destructive" onClick={() => refetch()}>
+          {t("common.errors.failed")}
+        </button>
+      ) : viewMode === "list" ? (
         <DataTable columns={columns} data={logs} onRowClick={handleRowClick} />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
