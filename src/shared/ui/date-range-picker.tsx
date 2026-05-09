@@ -44,23 +44,25 @@ export function DatePickerWithRange({
             id="date"
             variant={"outline"}
             className={cn(
-              "w-[260px] justify-start text-left font-normal",
+              "h-auto min-h-10 w-full min-w-0 max-w-full justify-start whitespace-normal text-left font-normal sm:w-[33rem]",
               !date && "text-muted-foreground"
             )}
           >
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            {date?.from ? (
-              date.to ? (
-                <>
-                  {format(date.from, "yyyy년 MM월 dd일", { locale: ko })} -{" "}
-                  {format(date.to, "yyyy년 MM월 dd일", { locale: ko })}
-                </>
+            <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
+            <span className="min-w-0 break-keep leading-5">
+              {date?.from ? (
+                date.to ? (
+                  <>
+                    {format(date.from, "yyyy년 MM월 dd일", { locale: ko })} -{" "}
+                    {format(date.to, "yyyy년 MM월 dd일", { locale: ko })}
+                  </>
+                ) : (
+                  format(date.from, "yyyy년 MM월 dd일", { locale: ko })
+                )
               ) : (
-                format(date.from, "yyyy년 MM월 dd일", { locale: ko })
-              )
-            ) : (
-              <span>날짜 선택</span>
-            )}
+                "날짜 선택"
+              )}
+            </span>
           </Button>
         </PopoverTrigger>
         <PopoverContent
