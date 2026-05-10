@@ -88,6 +88,16 @@
     "description": "Inspect live request logs by controller group.",
     "trackedPrefixes": "Tracked prefixes",
     "all": "ALL",
+    "filters": "Controller groups",
+    "livePolling": "Refreshes every 2 seconds",
+    "requestBody": "Request body",
+    "responseBody": "Response body",
+    "metrics": {
+      "total": "Total requests",
+      "groups": "Groups",
+      "errors": "Errors",
+      "avgLatency": "Avg response"
+    },
     "loading": "Loading request logs.",
     "failed": "Failed to load request logs.",
     "empty": "No request logs to display."

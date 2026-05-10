@@ -88,6 +88,16 @@
     "description": "실시간 요청 로그를 컨트롤러 그룹별로 확인합니다.",
     "trackedPrefixes": "추적 prefix",
     "all": "ALL",
+    "filters": "컨트롤러 그룹",
+    "livePolling": "2초마다 갱신",
+    "requestBody": "요청 본문",
+    "responseBody": "응답 본문",
+    "metrics": {
+      "total": "전체 요청",
+      "groups": "그룹",
+      "errors": "오류",
+      "avgLatency": "평균 응답"
+    },
     "loading": "요청 로그를 불러오는 중입니다.",
     "failed": "요청 로그를 불러오지 못했습니다.",
     "empty": "표시할 요청 로그가 없습니다."

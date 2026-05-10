@@ -23,6 +23,10 @@ function formatBody(body?: string) {
   }
 }
 
+export function formatTrafficBody(body?: string) {
+  return formatBody(body) || "-";
+}
+
 export function formatTrafficLog(log: TrafficLog) {
   return [
     `=== ${log.direction} ${log.method} ${log.path} ===`,
