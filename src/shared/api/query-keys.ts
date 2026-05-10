@@ -41,6 +41,10 @@ export const queryKeys = {
     logs: (serviceId: string, params?: unknown) =>
       ["services", "logs", serviceId, params] as const,
   },
+  traffic: {
+    config: () => ["traffic", "config"] as const,
+    logs: (params?: unknown) => ["traffic", "logs", params] as const,
+  },
   integrations: {
     overview: () => ["integrations", "overview"] as const,
     detail: (key: string) => ["integrations", "detail", key] as const,

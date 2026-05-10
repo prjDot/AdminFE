@@ -82,6 +82,16 @@
     "welcome": "환영합니다, {{name}}",
     "fallbackAdmin": "관리자"
   },
+  "traffic": {
+    "eyebrow": "요청 콘솔",
+    "title": "어드민 요청 콘솔",
+    "description": "실시간 요청 로그를 컨트롤러 그룹별로 확인합니다.",
+    "trackedPrefixes": "추적 prefix",
+    "all": "ALL",
+    "loading": "요청 로그를 불러오는 중입니다.",
+    "failed": "요청 로그를 불러오지 못했습니다.",
+    "empty": "표시할 요청 로그가 없습니다."
+  },
   "login": {
     "title": "관리자 로그인",
     "username": "아이디",

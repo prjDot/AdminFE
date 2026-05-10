@@ -82,6 +82,16 @@
     "welcome": "Welcome, {{name}}",
     "fallbackAdmin": "Admin"
   },
+  "traffic": {
+    "eyebrow": "Request Console",
+    "title": "Admin Request Console",
+    "description": "Inspect live request logs by controller group.",
+    "trackedPrefixes": "Tracked prefixes",
+    "all": "ALL",
+    "loading": "Loading request logs.",
+    "failed": "Failed to load request logs.",
+    "empty": "No request logs to display."
+  },
   "login": {
     "title": "Admin Login",
     "username": "Username",
