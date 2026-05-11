@@ -9,7 +9,7 @@ export const queryKeys = {
   users: {
     list: (params?: unknown) => ["users", "list", params] as const,
     detail: (userId: string) => ["users", "detail", userId] as const,
-    adminStatus: () => ["users", "admin-status"] as const,
+    permissionsStatus: () => ["users", "permissions-status"] as const,
   },
   notices: {
     list: (params?: unknown) => ["notices", "list", params] as const,

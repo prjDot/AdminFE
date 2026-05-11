@@ -33,72 +33,14 @@ import {
   DropdownMenuTrigger,
 } from "@/shared/ui/dropdown-menu";
 import { Input } from "@/shared/ui/input";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/shared/ui/sheet";
 import { ToggleGroup, ToggleGroupItem } from "@/shared/ui/toggle-group";
 import { DataTable } from "@/widgets/data-table/ui/data-table";
-
-// ─── Pure helpers ─────────────────────────────────────────────────────────────
-
-function getCategoryVariant(
-  category: string,
-): "destructive" | "default" | "secondary" {
-  const lower = category.toLowerCase();
-  if (lower === "qna") return "destructive";
-  if (lower === "tip") return "default";
-  return "secondary";
-}
-
-function formatDate(dateString: string | null | undefined): string {
-  if (!dateString) return "-";
-  return new Date(dateString).toLocaleDateString("ko-KR");
-}
-
-function getCommentsCount(value: unknown): number {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-
-  if (typeof value === "string") {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : 0;
-  }
-
-  if (Array.isArray(value)) {
-    return value.length;
-  }
-
-  if (value && typeof value === "object") {
-    const record = value as Record<string, unknown>;
-    const countKeys = ["count", "total", "totalCount", "commentCount", "size"];
-
-    for (const key of countKeys) {
-      const rawCount = record[key];
-      if (typeof rawCount === "number" && Number.isFinite(rawCount)) {
-        return rawCount;
-      }
-    }
-
-    const items = record.items;
-    if (Array.isArray(items)) {
-      return items.length;
-    }
-
-    if (
-      "id" in record &&
-      "authorId" in record &&
-      "authorName" in record &&
-      "content" in record
-    ) {
-      return 1;
-    }
-  }
-
-  return 0;
-}
+import { CommunityDetailSheet } from "./community-detail-sheet";
+import {
+  formatDate,
+  getCategoryVariant,
+  getCommentsCount,
+} from "./community-table-utils";
 
 const PAGE_SIZE = 20;
 
@@ -430,112 +372,15 @@ export function CommunityTableSection() {
         </div>
       )}
 
-      {/* Detail Sheet */}
-      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-        <SheetContent className="w-full overflow-y-auto sm:max-w-md">
-          <SheetHeader>
-            <SheetTitle>{t("community.detail.title")}</SheetTitle>
-            <SheetDescription>
-              {t("community.detail.description")}
-            </SheetDescription>
-          </SheetHeader>
-
-          {isDetailLoading ? (
-            <div className="py-12 text-center text-sm text-muted-foreground">
-              {t("common.loading", "불러오는 중...")}
-            </div>
-          ) : postDetail ? (
-            <div className="space-y-6 py-6">
-              {/* Meta */}
-              <div className="space-y-2">
-                <Badge variant={getCategoryVariant(postDetail.category)}>
-                  {postDetail.category}
-                </Badge>
-                <h3 className="text-xl font-bold">{postDetail.title}</h3>
-                <p className="pt-1 text-sm text-muted-foreground">
-                  {t("community.detail.meta", {
-                    author: postDetail.author,
-                    date: formatDate(postDetail.createdAt),
-                  })}
-                </p>
-              </div>
-
-              {/* Content */}
-              <div className="min-h-[150px] rounded-lg border bg-muted/30 p-4 text-sm whitespace-pre-wrap">
-                {postDetail.content ??
-                  t("community.detail.noContent", "내용 없음")}
-              </div>
-
-              {/* Stats */}
-              <div className="flex gap-4 rounded-lg border bg-card p-4">
-                <div className="flex flex-1 flex-col items-center">
-                  <span className="text-2xl font-bold">
-                    {postDetail.likes ?? 0}
-                  </span>
-                  <span className="mt-1 text-xs uppercase tracking-widest text-muted-foreground">
-                    {t("community.table.likes")}
-                  </span>
-                </div>
-                <div className="w-px bg-border" />
-                <div className="flex flex-1 flex-col items-center">
-                  <span className="text-2xl font-bold">
-                    {getCommentsCount(postDetail.comments)}
-                  </span>
-                  <span className="mt-1 text-xs uppercase tracking-widest text-muted-foreground">
-                    {t("community.table.comments")}
-                  </span>
-                </div>
-                <div className="w-px bg-border" />
-                <div className="flex flex-1 flex-col items-center">
-                  <span className="text-2xl font-bold">
-                    {postDetail.reportCount}
-                  </span>
-                  <span className="mt-1 text-xs uppercase tracking-widest text-muted-foreground">
-                    {t("community.detail.reports", "신고")}
-                  </span>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex justify-end gap-2 pt-4">
-                <ConfirmAction
-                  title={t("community.confirm.hideTitle", "게시글 숨김 처리")}
-                  description={t(
-                    "community.confirm.hideDescription",
-                    "이 커뮤니티 게시글을 숨김 처리하시겠습니까?",
-                  )}
-                  confirmLabel={t("community.menu.hidePost", "숨김 처리")}
-                  cancelLabel={t("common.actions.cancel", "취소")}
-                  onConfirm={() => {
-                    if (selectedPostId) mutateHide(selectedPostId);
-                  }}
-                >
-                  <Button variant="outline">
-                    {t("community.menu.hidePost", "숨김 처리")}
-                  </Button>
-                </ConfirmAction>
-                <ConfirmAction
-                  title={t("community.confirm.deleteTitle", "게시글 삭제")}
-                  description={t(
-                    "community.confirm.deleteDescription",
-                    "이 커뮤니티 게시글을 삭제하시겠습니까? 이 작업은 되돌리기 어렵습니다.",
-                  )}
-                  confirmLabel={t("community.menu.deletePost")}
-                  cancelLabel={t("common.actions.cancel", "취소")}
-                  destructive
-                  onConfirm={() => {
-                    if (selectedPostId) mutateDelete(selectedPostId);
-                  }}
-                >
-                  <Button variant="destructive">
-                    {t("community.menu.deletePost")}
-                  </Button>
-                </ConfirmAction>
-              </div>
-            </div>
-          ) : null}
-        </SheetContent>
-      </Sheet>
+      <CommunityDetailSheet
+        isLoading={isDetailLoading}
+        open={isSheetOpen}
+        postDetail={postDetail}
+        selectedPostId={selectedPostId}
+        onDelete={mutateDelete}
+        onHide={mutateHide}
+        onOpenChange={setIsSheetOpen}
+      />
     </div>
   );
 }

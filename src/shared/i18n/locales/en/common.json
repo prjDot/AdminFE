@@ -188,6 +188,7 @@
       "actions": "Actions",
       "copyUserId": "Copy User ID",
       "viewProfile": "View Profile",
+      "viewPermissions": "View Permissions",
       "changeRole": "Change Role",
       "unsuspend": "Unsuspend Account",
       "suspend": "Suspend Account"
@@ -220,6 +221,14 @@
       "promote": "Promote to Admin",
       "success": "Promoted {{email}} to admin.",
       "failed": "Failed to promote admin."
+    },
+    "permissions": {
+      "title": "User Permission Status",
+      "description": "Review admin permissions and verification state for {{email}}.",
+      "adminPermissions": "Admin permissions",
+      "userPermission": "User permission",
+      "verifiedAt": "Verified at: {{date}}",
+      "failed": "Failed to load permission status."
     }
   },
   "notices": {

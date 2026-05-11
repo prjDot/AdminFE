@@ -45,6 +45,7 @@ import {
 } from "@/features/users/api/users-api";
 import { DataTable } from "@/widgets/data-table/ui/data-table";
 import { UserDetailSheet } from "./user-detail-sheet";
+import { UserPermissionsAction } from "./user-permissions-action";
 import { UsersGrid } from "./users-grid";
 import { getStatusVariant, isUserSuspended } from "./user-table-utils";
 
@@ -237,6 +238,7 @@ export function UsersTableSection() {
                 <DropdownMenuItem onClick={() => openUserProfile(user)}>
                   {t("users.menu.viewProfile")}
                 </DropdownMenuItem>
+                <UserPermissionsAction user={user} />
                 {suspended ? (
                   <ConfirmAction
                     title={t(

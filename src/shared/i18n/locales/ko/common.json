@@ -188,6 +188,7 @@
       "actions": "작업",
       "copyUserId": "사용자 ID 복사",
       "viewProfile": "프로필 보기",
+      "viewPermissions": "권한 조회",
       "changeRole": "권한 변경",
       "unsuspend": "정지 해제",
       "suspend": "계정 정지"
@@ -220,6 +221,14 @@
       "promote": "관리자로 승격",
       "success": "{{email}} 사용자를 관리자로 승격했습니다.",
       "failed": "관리자 승격에 실패했습니다."
+    },
+    "permissions": {
+      "title": "사용자 권한 상태",
+      "description": "{{email}} 계정의 관리자 권한과 인증 상태를 조회합니다.",
+      "adminPermissions": "관리자 세부 권한",
+      "userPermission": "사용자 권한",
+      "verifiedAt": "인증 완료: {{date}}",
+      "failed": "권한 상태를 불러오지 못했습니다."
     }
   },
   "notices": {

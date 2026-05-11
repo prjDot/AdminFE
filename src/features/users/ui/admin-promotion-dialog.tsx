@@ -18,7 +18,7 @@ import {
 } from "@/shared/ui/dialog";
 import { Input } from "@/shared/ui/input";
 import {
-  fetchAdminStatus,
+  fetchUserPermissionsStatus,
   fetchUsers,
   promoteUserToAdmin,
   type AdminUserListItem,
@@ -56,8 +56,8 @@ export function AdminPromotionDialog({ triggerLabel }: AdminPromotionDialogProps
   });
 
   const { data: adminStatus, isLoading: adminsLoading } = useQuery({
-    queryKey: queryKeys.users.adminStatus(),
-    queryFn: fetchAdminStatus,
+    queryKey: queryKeys.users.permissionsStatus(),
+    queryFn: fetchUserPermissionsStatus,
     enabled: open,
     staleTime: 30_000,
   });
