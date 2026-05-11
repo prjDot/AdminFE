@@ -99,7 +99,11 @@ export function LoginPage() {
             onClick={handleGoogleLogin}
             disabled={isAuthenticating || firebaseConfigMissing}
           >
-            {isAuthenticating ? t("common.loading") : t("login.googleSignIn")}
+            {isAuthenticating
+              ? t("common.loading")
+              : emailVerificationSent
+                ? t("login.resendVerificationEmail")
+                : t("login.googleSignIn")}
           </Button>
         </div>
       </div>
