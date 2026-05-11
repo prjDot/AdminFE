@@ -87,7 +87,7 @@ export async function fetchUserDetail(userId: string) {
 export async function fetchAdminStatus() {
   return unwrapApiResponse(
     await apiClient.get<ApiResponse<AdminStatusResponse>>(
-      "/admin/users/admins/status",
+      "/admin/users/permissions/status",
     ),
   );
 }
