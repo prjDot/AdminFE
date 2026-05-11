@@ -39,11 +39,6 @@ export interface PromoteAdminResponse {
   status: string;
 }
 
-export interface InviteAdminRequest {
-  email: string;
-  role: "ADMIN" | "MODERATOR";
-}
-
 export interface AdminStatusSummary {
   totalAdmins: number;
   activeAdmins: number;
@@ -60,6 +55,7 @@ export interface AdminStatusItem {
   permissions: string[];
   adminEmailVerificationRequired: boolean;
   adminEmailVerifiedAt: string | null;
+  adminEmailVerificationSentAt: string | null;
   adminEmailVerificationStatus: "VERIFIED" | "PENDING";
 }
 
@@ -121,16 +117,6 @@ export async function promoteUserToAdminByEmail(email: string) {
         "/admin/users/promote/email",
         { email },
       ),
-    );
-  } catch (error) {
-    throw toApiResponseError(error);
-  }
-}
-
-export async function sendAdminInviteEmail(request: InviteAdminRequest) {
-  try {
-    return unwrapApiResponse(
-      await apiClient.post<ApiResponse<null>>("/admin/users/invite", request),
     );
   } catch (error) {
     throw toApiResponseError(error);

@@ -227,8 +227,6 @@
       "promote": "Promote to Admin",
       "success": "Promoted {{email}} to admin.",
       "successWithVerificationNotice": "Promoted {{email}} to admin. A verification email will be sent when the user signs in.",
-      "successWithInviteSent": "Promoted {{email}} to admin and sent the invite email.",
-      "inviteEmailFailed": "Admin promotion completed, but sending the invite email failed.",
       "alreadyAdmin": "This user is already an admin.",
       "userAlreadyExists": "Found an existing user, but automatic promotion failed. Select the user from the list and promote them.",
       "invalidEmail": "Enter a valid email address.",
