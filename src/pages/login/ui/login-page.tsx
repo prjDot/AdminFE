@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ShieldCheck } from "lucide-react";
 import { useAuthStore } from "@/features/auth/model/auth-store";
@@ -13,6 +13,8 @@ export function LoginPage() {
   const requestGoogleLogin = useAuthStore((state) => state.requestGoogleLogin);
   const isAuthenticating = useAuthStore((state) => state.isAuthenticating);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const adminVerifyDone = searchParams.get("adminVerify") === "done";
 
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -65,6 +67,12 @@ export function LoginPage() {
             <FormStatus
               tone="error"
               message={t("auth.errors.firebaseConfigMissing")}
+            />
+          ) : null}
+          {adminVerifyDone ? (
+            <FormStatus
+              tone="success"
+              message={t("login.adminVerifyDone")}
             />
           ) : null}
           {errorKey ? (

@@ -108,7 +108,8 @@
     "password": "비밀번호",
     "signIn": "로그인",
     "googleDescription": "Google 계정으로 관리자 인증을 시작합니다.",
-    "googleSignIn": "Google로 계속하기"
+    "googleSignIn": "Google로 계속하기",
+    "adminVerifyDone": "이메일 인증이 완료되었습니다. 다시 로그인해주세요."
   },
   "otp": {
     "title": "2단계 인증",
@@ -229,6 +230,7 @@
       "invalidEmail": "올바른 이메일을 입력하세요.",
       "forbidden": "관리자 승격 권한이 없습니다.",
       "unauthorized": "관리자 세션이 만료되었습니다. 다시 로그인하세요.",
+      "stepUpRequired": "승격 전 패스키 재인증이 필요합니다.",
       "failed": "관리자 승격에 실패했습니다."
     },
     "permissions": {

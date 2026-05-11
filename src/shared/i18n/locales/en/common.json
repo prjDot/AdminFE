@@ -108,7 +108,8 @@
     "password": "Password",
     "signIn": "Sign In",
     "googleDescription": "Start admin authentication with your Google account.",
-    "googleSignIn": "Continue with Google"
+    "googleSignIn": "Continue with Google",
+    "adminVerifyDone": "Email verification is complete. Sign in again."
   },
   "otp": {
     "title": "2-Step Verification",
@@ -229,6 +230,7 @@
       "invalidEmail": "Enter a valid email address.",
       "forbidden": "You do not have permission to promote admins.",
       "unauthorized": "Your admin session expired. Sign in again.",
+      "stepUpRequired": "Passkey re-authentication is required before promotion.",
       "failed": "Failed to promote admin."
     },
     "permissions": {

@@ -160,6 +160,28 @@ export async function verifyPasskeyMfa(
   );
 }
 
+export async function getPasskeyStepUpOptions() {
+  return normalizePasskeyOptions(
+    unwrapApiResponse(
+      await apiClient.post<ApiResponse<AdminPasskeyOptionsResponse>>(
+        "/admin/auth/stepup/options",
+      ),
+    ),
+  );
+}
+
+export async function verifyPasskeyStepUp(
+  challengeId: string,
+  credential: unknown,
+) {
+  return unwrapApiResponse(
+    await apiClient.post<ApiResponse<null>>("/admin/auth/stepup/verify", {
+      challengeId,
+      credential,
+    }),
+  );
+}
+
 export async function logoutAdminSession() {
   return unwrapApiResponse(
     await apiClient.post<ApiResponse<null>>("/admin/auth/logout"),

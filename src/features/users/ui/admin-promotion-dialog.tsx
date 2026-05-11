@@ -19,6 +19,12 @@ import {
 } from "@/shared/ui/dialog";
 import { Input } from "@/shared/ui/input";
 import {
+  getPasskeyStepUpOptions,
+  verifyPasskeyStepUp,
+} from "@/features/auth/api/admin-auth-api";
+import { getPasskeyCredential } from "@/features/auth/lib/webauthn";
+import { getErrorKey } from "@/features/auth/model/auth-error-utils";
+import {
   ApiResponseError,
   toApiResponseError,
 } from "@/shared/api/api-response";
@@ -78,6 +84,8 @@ export function AdminPromotionDialog({ triggerLabel }: AdminPromotionDialogProps
       email?: string;
       userId?: string;
     }) => {
+      await completeAdminPromotionStepUp();
+
       if (email) {
         return promoteAdminByEmail(email);
       }
@@ -312,13 +320,23 @@ function getPromotionErrorMessage(
       return t("users.adminPromotion.unauthorized");
     }
 
+    if (normalizedError.code === "ADMIN_STEP_UP_REQUIRED") {
+      return t("users.adminPromotion.stepUpRequired");
+    }
+
     return normalizedError.message || t("users.adminPromotion.failed");
   }
 
   return normalizedError instanceof Error &&
     normalizedError.message !== "USER_ID_REQUIRED"
-    ? normalizedError.message
+    ? t(getErrorKey(normalizedError))
     : t("users.adminPromotion.failed");
+}
+
+async function completeAdminPromotionStepUp() {
+  const options = await getPasskeyStepUpOptions();
+  const credential = await getPasskeyCredential(options.publicKey);
+  await verifyPasskeyStepUp(options.challengeId, credential);
 }
 
 function CandidateRow({
