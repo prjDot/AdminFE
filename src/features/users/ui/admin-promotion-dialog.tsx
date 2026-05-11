@@ -1,5 +1,6 @@
 import { type ReactNode, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { TFunction } from "i18next";
 import { Search, ShieldCheck, UserPlus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -18,10 +19,16 @@ import {
 } from "@/shared/ui/dialog";
 import { Input } from "@/shared/ui/input";
 import {
+  ApiResponseError,
+  toApiResponseError,
+} from "@/shared/api/api-response";
+import {
   fetchUserPermissionsStatus,
   fetchUsers,
+  promoteUserToAdminByEmail,
   promoteUserToAdmin,
   type AdminUserListItem,
+  type PromoteAdminResponse,
 } from "@/features/users/api/users-api";
 
 interface AdminPromotionDialogProps {
@@ -33,6 +40,7 @@ export function AdminPromotionDialog({ triggerLabel }: AdminPromotionDialogProps
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const debouncedQuery = useDebouncedValue(query);
 
@@ -63,20 +71,33 @@ export function AdminPromotionDialog({ triggerLabel }: AdminPromotionDialogProps
   });
 
   const promoteMutation = useMutation({
-    mutationFn: promoteUserToAdmin,
+    mutationFn: async ({
+      email,
+      userId,
+    }: {
+      email?: string;
+      userId?: string;
+    }) => {
+      if (email) {
+        return promoteAdminByEmail(email);
+      }
+
+      if (!userId) {
+        throw new Error("USER_ID_REQUIRED");
+      }
+
+      return promoteUserToAdmin(userId);
+    },
     onSuccess: (result) => {
       toast.success(
         t("users.adminPromotion.success", { email: result.email }),
       );
+      setInviteEmail("");
       setSelectedUserId(null);
       void queryClient.invalidateQueries({ queryKey: ["users"] });
     },
     onError: (error) => {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : t("users.adminPromotion.failed"),
-      );
+      toast.error(getPromotionErrorMessage(error, t));
     },
   });
 
@@ -109,6 +130,36 @@ export function AdminPromotionDialog({ triggerLabel }: AdminPromotionDialogProps
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
               />
+            </div>
+            <div className="space-y-2 rounded-lg border bg-muted/20 p-3">
+              <label className="space-y-2">
+                <span className="text-sm font-medium">
+                  {t("users.adminPromotion.inviteEmail")}
+                </span>
+                <Input
+                  placeholder={t("users.adminPromotion.inviteEmailPlaceholder")}
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(event) => setInviteEmail(event.target.value)}
+                />
+              </label>
+              <Button
+                className="w-full gap-2"
+                disabled={!inviteEmail.trim() || promoteMutation.isPending}
+                type="button"
+                variant="secondary"
+                onClick={() =>
+                  promoteMutation.mutate({ email: inviteEmail.trim() })
+                }
+              >
+                <UserPlus className="h-4 w-4" />
+                {promoteMutation.isPending
+                  ? t("common.loading")
+                  : t("users.adminPromotion.inviteByEmail")}
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                {t("users.adminPromotion.inviteHelp")}
+              </p>
             </div>
             <div className="overflow-hidden rounded-lg border">
               {usersLoading ? (
@@ -186,7 +237,9 @@ export function AdminPromotionDialog({ triggerLabel }: AdminPromotionDialogProps
           </p>
           <Button
             disabled={!selectedUserId || promoteMutation.isPending}
-            onClick={() => selectedUserId && promoteMutation.mutate(selectedUserId)}
+            onClick={() =>
+              selectedUserId && promoteMutation.mutate({ userId: selectedUserId })
+            }
           >
             <ShieldCheck className="h-4 w-4" />
             {promoteMutation.isPending
@@ -197,6 +250,75 @@ export function AdminPromotionDialog({ triggerLabel }: AdminPromotionDialogProps
       </DialogContent>
     </Dialog>
   );
+}
+
+async function promoteAdminByEmail(email: string): Promise<PromoteAdminResponse> {
+  try {
+    return await promoteUserToAdminByEmail(email);
+  } catch (error) {
+    const normalizedError = toApiResponseError(error);
+
+    if (
+      normalizedError instanceof ApiResponseError &&
+      normalizedError.code === "USER_ALREADY_EXISTS"
+    ) {
+      const users = await fetchUsers({
+        page: 1,
+        pageSize: 10,
+        query: email,
+        role: "USER",
+        sortBy: "createdAt",
+        sortOrder: "desc",
+      });
+      const existingUser = users.items.find(
+        (user) => user.email.toLowerCase() === email.toLowerCase(),
+      );
+
+      if (!existingUser) {
+        throw normalizedError;
+      }
+
+      return promoteUserToAdmin(existingUser.id);
+    }
+
+    throw normalizedError;
+  }
+}
+
+function getPromotionErrorMessage(
+  error: unknown,
+  t: TFunction,
+) {
+  const normalizedError = toApiResponseError(error);
+
+  if (normalizedError instanceof ApiResponseError) {
+    if (normalizedError.code === "ALREADY_ADMIN") {
+      return t("users.adminPromotion.alreadyAdmin");
+    }
+
+    if (normalizedError.code === "USER_ALREADY_EXISTS") {
+      return t("users.adminPromotion.userAlreadyExists");
+    }
+
+    if (normalizedError.code === "INVALID_EMAIL") {
+      return t("users.adminPromotion.invalidEmail");
+    }
+
+    if (normalizedError.code === "FORBIDDEN") {
+      return t("users.adminPromotion.forbidden");
+    }
+
+    if (normalizedError.code === "UNAUTHORIZED") {
+      return t("users.adminPromotion.unauthorized");
+    }
+
+    return normalizedError.message || t("users.adminPromotion.failed");
+  }
+
+  return normalizedError instanceof Error &&
+    normalizedError.message !== "USER_ID_REQUIRED"
+    ? normalizedError.message
+    : t("users.adminPromotion.failed");
 }
 
 function CandidateRow({

@@ -212,6 +212,10 @@
       "title": "Promote Admin",
       "description": "Select a user and grant admin privileges.",
       "searchPlaceholder": "Search candidates by name or email",
+      "inviteEmail": "Invite email",
+      "inviteEmailPlaceholder": "target@example.com",
+      "inviteByEmail": "Invite by email",
+      "inviteHelp": "Existing users are automatically promoted through the user ID flow.",
       "noCandidates": "No promotable users found.",
       "totalAdmins": "Total admins",
       "activeAdmins": "Active admins",
@@ -220,6 +224,11 @@
       "selectRequired": "Select a user to promote.",
       "promote": "Promote to Admin",
       "success": "Promoted {{email}} to admin.",
+      "alreadyAdmin": "This user is already an admin.",
+      "userAlreadyExists": "Found an existing user, but automatic promotion failed. Select the user from the list and promote them.",
+      "invalidEmail": "Enter a valid email address.",
+      "forbidden": "You do not have permission to promote admins.",
+      "unauthorized": "Your admin session expired. Sign in again.",
       "failed": "Failed to promote admin."
     },
     "permissions": {

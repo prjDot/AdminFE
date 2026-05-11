@@ -1,5 +1,9 @@
 import { apiClient } from "@/shared/api/client";
-import { type ApiResponse, unwrapApiResponse } from "@/shared/api/api-response";
+import {
+  type ApiResponse,
+  toApiResponseError,
+  unwrapApiResponse,
+} from "@/shared/api/api-response";
 
 export interface AdminUserListItem {
   id: string;
@@ -93,12 +97,29 @@ export async function fetchUserPermissionsStatus() {
 }
 
 export async function promoteUserToAdmin(userId: string) {
-  return unwrapApiResponse(
-    await apiClient.patch<ApiResponse<PromoteAdminResponse>>(
-      "/admin/users/promote",
-      { userId },
-    ),
-  );
+  try {
+    return unwrapApiResponse(
+      await apiClient.patch<ApiResponse<PromoteAdminResponse>>(
+        "/admin/users/promote",
+        { userId },
+      ),
+    );
+  } catch (error) {
+    throw toApiResponseError(error);
+  }
+}
+
+export async function promoteUserToAdminByEmail(email: string) {
+  try {
+    return unwrapApiResponse(
+      await apiClient.post<ApiResponse<PromoteAdminResponse>>(
+        "/admin/users/promote/email",
+        { email },
+      ),
+    );
+  } catch (error) {
+    throw toApiResponseError(error);
+  }
 }
 
 export async function suspendUser(userId: string) {
