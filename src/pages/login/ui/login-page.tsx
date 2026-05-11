@@ -18,6 +18,7 @@ export function LoginPage() {
 
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [emailVerificationSent, setEmailVerificationSent] = useState(false);
 
   if (step === "AUTHENTICATED") {
     return <Navigate to="/dashboard" replace />;
@@ -30,6 +31,7 @@ export function LoginPage() {
   const handleGoogleLogin = async () => {
     setErrorKey(null);
     setErrorMessage(null);
+    setEmailVerificationSent(false);
     const result = await requestGoogleLogin();
 
     if (!result.ok) {
@@ -39,7 +41,7 @@ export function LoginPage() {
     }
 
     if (result.nextStep === "EMAIL_VERIFICATION_REQUIRED") {
-      setErrorKey("auth.errors.emailVerificationRequired");
+      setEmailVerificationSent(true);
       return;
     }
 
@@ -73,6 +75,12 @@ export function LoginPage() {
             <FormStatus
               tone="success"
               message={t("login.adminVerifyDone")}
+            />
+          ) : null}
+          {emailVerificationSent ? (
+            <FormStatus
+              tone="success"
+              message={t("login.emailVerificationSent")}
             />
           ) : null}
           {errorKey ? (

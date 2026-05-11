@@ -109,7 +109,8 @@
     "signIn": "Sign In",
     "googleDescription": "Start admin authentication with your Google account.",
     "googleSignIn": "Continue with Google",
-    "adminVerifyDone": "Email verification is complete. Sign in again."
+    "adminVerifyDone": "Email verification is complete. Sign in again.",
+    "emailVerificationSent": "Admin verification email has been sent. Verify the email and sign in again."
   },
   "otp": {
     "title": "2-Step Verification",
@@ -225,6 +226,9 @@
       "selectRequired": "Select a user to promote.",
       "promote": "Promote to Admin",
       "success": "Promoted {{email}} to admin.",
+      "successWithVerificationNotice": "Promoted {{email}} to admin. A verification email will be sent when the user signs in.",
+      "successWithInviteSent": "Promoted {{email}} to admin and sent the invite email.",
+      "inviteEmailFailed": "Admin promotion completed, but sending the invite email failed.",
       "alreadyAdmin": "This user is already an admin.",
       "userAlreadyExists": "Found an existing user, but automatic promotion failed. Select the user from the list and promote them.",
       "invalidEmail": "Enter a valid email address.",

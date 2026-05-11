@@ -33,6 +33,7 @@ import {
   fetchUsers,
   promoteUserToAdminByEmail,
   promoteUserToAdmin,
+  sendAdminInviteEmail,
   type AdminUserListItem,
   type PromoteAdminResponse,
 } from "@/features/users/api/users-api";
@@ -86,20 +87,27 @@ export function AdminPromotionDialog({ triggerLabel }: AdminPromotionDialogProps
     }) => {
       await completeAdminPromotionStepUp();
 
+      let result: PromoteAdminResponse;
       if (email) {
-        return promoteAdminByEmail(email);
-      }
-
-      if (!userId) {
+        result = await promoteAdminByEmail(email);
+      } else if (userId) {
+        result = await promoteUserToAdmin(userId);
+      } else {
         throw new Error("USER_ID_REQUIRED");
       }
 
-      return promoteUserToAdmin(userId);
+      const inviteEmailSent = await trySendAdminInviteEmail(result.email);
+      return { inviteEmailSent, result };
     },
-    onSuccess: (result) => {
+    onSuccess: ({ inviteEmailSent, result }) => {
       toast.success(
-        t("users.adminPromotion.success", { email: result.email }),
+        t("users.adminPromotion.successWithInviteSent", {
+          email: result.email,
+        }),
       );
+      if (!inviteEmailSent) {
+        toast.warning(t("users.adminPromotion.inviteEmailFailed"));
+      }
       setInviteEmail("");
       setSelectedUserId(null);
       void queryClient.invalidateQueries({ queryKey: ["users"] });
@@ -290,6 +298,15 @@ async function promoteAdminByEmail(email: string): Promise<PromoteAdminResponse>
     }
 
     throw normalizedError;
+  }
+}
+
+async function trySendAdminInviteEmail(email: string) {
+  try {
+    await sendAdminInviteEmail({ email, role: "ADMIN" });
+    return true;
+  } catch {
+    return false;
   }
 }
 
