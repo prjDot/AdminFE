@@ -206,6 +206,20 @@
       "changeRoleQueued": "Queued role change request for {{name}}.",
       "suspended": "Suspended {{name}}.",
       "unsuspended": "Unsuspended {{name}}."
+    },
+    "adminPromotion": {
+      "title": "Promote Admin",
+      "description": "Select a user and grant admin privileges.",
+      "searchPlaceholder": "Search candidates by name or email",
+      "noCandidates": "No promotable users found.",
+      "totalAdmins": "Total admins",
+      "activeAdmins": "Active admins",
+      "currentAdmins": "Current admins",
+      "selected": "Selected: {{email}}",
+      "selectRequired": "Select a user to promote.",
+      "promote": "Promote to Admin",
+      "success": "Promoted {{email}} to admin.",
+      "failed": "Failed to promote admin."
     }
   },
   "notices": {

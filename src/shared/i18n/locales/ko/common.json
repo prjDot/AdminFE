@@ -206,6 +206,20 @@
       "changeRoleQueued": "{{name}} 사용자 권한 변경 요청을 등록했습니다.",
       "suspended": "{{name}} 계정을 정지했습니다.",
       "unsuspended": "{{name}} 계정 정지를 해제했습니다."
+    },
+    "adminPromotion": {
+      "title": "관리자 승격",
+      "description": "사용자 목록에서 대상을 선택해 관리자 권한을 부여합니다.",
+      "searchPlaceholder": "이름 또는 이메일로 승격 대상 검색",
+      "noCandidates": "승격 가능한 사용자가 없습니다.",
+      "totalAdmins": "전체 관리자",
+      "activeAdmins": "활성 관리자",
+      "currentAdmins": "현재 관리자",
+      "selected": "선택됨: {{email}}",
+      "selectRequired": "승격할 사용자를 선택하세요.",
+      "promote": "관리자로 승격",
+      "success": "{{email}} 사용자를 관리자로 승격했습니다.",
+      "failed": "관리자 승격에 실패했습니다."
     }
   },
   "notices": {

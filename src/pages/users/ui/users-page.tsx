@@ -1,5 +1,5 @@
-import { Button } from "@/shared/ui/button";
 import { useTranslation } from "react-i18next";
+import { AdminPromotionDialog } from "@/features/users/ui/admin-promotion-dialog";
 import { UsersTableSection } from "@/widgets/users-table/ui/users-table-section";
 
 export function UsersPage() {
@@ -12,7 +12,7 @@ export function UsersPage() {
           <h1 className="text-3xl font-bold tracking-tight">{t("users.title")}</h1>
           <p className="mt-2 text-muted-foreground">{t("users.description")}</p>
         </div>
-        <Button className="w-full sm:w-auto">{t("common.actions.inviteAdmin")}</Button>
+        <AdminPromotionDialog triggerLabel={t("common.actions.inviteAdmin")} />
       </div>
 
       <UsersTableSection />

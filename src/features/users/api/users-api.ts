@@ -28,6 +28,37 @@ export interface AdminUserListResponse {
   total: number;
 }
 
+export interface PromoteAdminResponse {
+  userId: string;
+  email: string;
+  role: string;
+  status: string;
+}
+
+export interface AdminStatusSummary {
+  totalAdmins: number;
+  activeAdmins: number;
+  suspendedAdmins: number;
+  withdrawnAdmins: number;
+}
+
+export interface AdminStatusItem {
+  userId: string;
+  email: string;
+  nickname: string;
+  role: string;
+  status: string;
+  permissions: string[];
+  adminEmailVerificationRequired: boolean;
+  adminEmailVerifiedAt: string | null;
+  adminEmailVerificationStatus: "VERIFIED" | "PENDING";
+}
+
+export interface AdminStatusResponse {
+  summary: AdminStatusSummary;
+  admins: AdminStatusItem[];
+}
+
 export interface AdminUserProfile {
   region?: string;
   phoneNumber?: string;
@@ -50,6 +81,23 @@ export async function fetchUsers(params: AdminUserListParams) {
 export async function fetchUserDetail(userId: string) {
   return unwrapApiResponse(
     await apiClient.get<ApiResponse<AdminUserDetail>>(`/admin/users/${userId}`),
+  );
+}
+
+export async function fetchAdminStatus() {
+  return unwrapApiResponse(
+    await apiClient.get<ApiResponse<AdminStatusResponse>>(
+      "/admin/users/admins/status",
+    ),
+  );
+}
+
+export async function promoteUserToAdmin(userId: string) {
+  return unwrapApiResponse(
+    await apiClient.patch<ApiResponse<PromoteAdminResponse>>(
+      "/admin/users/promote",
+      { userId },
+    ),
   );
 }
 
