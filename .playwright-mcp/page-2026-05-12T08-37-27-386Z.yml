@@ -1,0 +1,7 @@
+- generic [ref=e4]:
+  - generic [ref=e5]:
+    - img [ref=e7]
+    - generic [ref=e10]:
+      - heading "관리자 로그인" [level=1] [ref=e11]
+      - paragraph [ref=e12]: Google 계정으로 관리자 인증을 시작합니다.
+  - button "Google로 계속하기" [ref=e14]

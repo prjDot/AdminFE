@@ -3,6 +3,7 @@ import { apiClient } from "@/shared/api/client";
 
 export interface TrafficConfig {
   trackedApiPrefixes: string[];
+  errorStatusFilter?: string;
 }
 
 export interface TrafficLog {
@@ -23,10 +24,15 @@ export async function fetchTrafficConfig() {
   );
 }
 
-export async function fetchTrafficLogs(limit = 100) {
+export interface TrafficLogParams {
+  errorsOnly?: boolean;
+  limit?: number;
+}
+
+export async function fetchTrafficLogs({ errorsOnly = false, limit = 100 }: TrafficLogParams = {}) {
   return unwrapApiResponse(
     await apiClient.get<ApiResponse<TrafficLog[]>>("/admin/traffic/logs", {
-      params: { limit },
+      params: { errorsOnly, limit },
     }),
   );
 }

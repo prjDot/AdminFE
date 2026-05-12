@@ -13,6 +13,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/shared/ui/card";
+import { Label } from "@/shared/ui/label";
+import { Switch } from "@/shared/ui/switch";
 import {
   ALL_TRAFFIC_GROUP,
   formatTrafficBody,
@@ -22,8 +24,9 @@ import {
 export function TrafficConsole() {
   const { t } = useTranslation();
   const [selectedGroup, setSelectedGroup] = useState(ALL_TRAFFIC_GROUP);
+  const [errorsOnly, setErrorsOnly] = useState(false);
   const { data: config } = useTrafficConfig();
-  const { data: logs = [], isError, isLoading } = useTrafficLogs(100);
+  const { data: logs = [], isError, isLoading } = useTrafficLogs(100, errorsOnly);
 
   const grouped = useMemo(() => {
     const next = new Map<string, typeof logs>();
@@ -71,6 +74,9 @@ export function TrafficConsole() {
               {t("traffic.trackedPrefixes")}:{" "}
               {(config?.trackedApiPrefixes ?? []).join(", ") || "-"}
             </Badge>
+            <Badge variant="outline" className="w-fit bg-background">
+              {t("traffic.errorFilter")}: {config?.errorStatusFilter ?? "-"}
+            </Badge>
           </div>
         </CardHeader>
         <CardContent className="space-y-5 p-4 sm:p-6">
@@ -84,7 +90,20 @@ export function TrafficConsole() {
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-3">
               <p className="text-sm font-medium">{t("traffic.filters")}</p>
-              <p className="text-xs text-muted-foreground">{t("traffic.livePolling")}</p>
+              <div className="flex items-center gap-3">
+                <Label
+                  htmlFor="traffic-errors-only"
+                  className="text-xs text-muted-foreground"
+                >
+                  {t("traffic.errorsOnly")}
+                </Label>
+                <Switch
+                  id="traffic-errors-only"
+                  checked={errorsOnly}
+                  onCheckedChange={setErrorsOnly}
+                />
+                <p className="text-xs text-muted-foreground">{t("traffic.livePolling")}</p>
+              </div>
             </div>
             <div className="flex gap-2 overflow-x-auto pb-1">
               <TrafficChip
@@ -223,7 +242,7 @@ function getTrafficStats(logs: TrafficLog[], groups: number) {
 
   return {
     avgDuration: logs.length ? Math.round(totalDuration / logs.length) : 0,
-    errors: logs.filter((log) => log.status >= 400).length,
+    errors: logs.filter((log) => log.status < 200 || log.status >= 300).length,
     groups,
     total: logs.length,
   };
