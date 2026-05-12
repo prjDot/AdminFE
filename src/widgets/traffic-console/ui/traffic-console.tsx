@@ -34,11 +34,12 @@ export function TrafficConsole() {
   const [errorsOnly, setErrorsOnly] = useState(false);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const { data: config } = useTrafficConfig();
-  const { data: logs = [], isError, isLoading } = useTrafficLogs(
+  const { data: logsData, isError, isLoading } = useTrafficLogs(
     100,
     errorsOnly,
     sortOrder,
   );
+  const logs = useMemo(() => logsData?.items ?? [], [logsData?.items]);
 
   const sortedLogs = useMemo(
     () =>
@@ -74,8 +75,8 @@ export function TrafficConsole() {
       : sortedLogs.filter((log) => getTrafficGroupKey(log.path) === selectedGroup);
 
   const stats = useMemo(
-    () => getTrafficStats(sortedLogs, grouped.length),
-    [sortedLogs, grouped],
+    () => getTrafficStats(sortedLogs, grouped.length, logsData?.errorCount),
+    [sortedLogs, grouped, logsData?.errorCount],
   );
 
   return (
@@ -280,12 +281,19 @@ function PayloadBlock({ title, value }: { title: string; value: string }) {
   );
 }
 
-function getTrafficStats(logs: TrafficLog[], groups: number) {
+function getTrafficStats(
+  logs: TrafficLog[],
+  groups: number,
+  errorCountFromApi?: number,
+) {
   const totalDuration = logs.reduce((sum, log) => sum + (log.durationMs || 0), 0);
+  const computedErrors = logs.filter(
+    (log) => log.status === 0 || log.status >= 400,
+  ).length;
 
   return {
     avgDuration: logs.length ? Math.round(totalDuration / logs.length) : 0,
-    errors: logs.filter((log) => log.status < 200 || log.status >= 300).length,
+    errors: typeof errorCountFromApi === "number" ? errorCountFromApi : computedErrors,
     groups,
     total: logs.length,
   };

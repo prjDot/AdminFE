@@ -18,6 +18,11 @@ export interface TrafficLog {
   responseBody?: string;
 }
 
+export interface TrafficLogsResponse {
+  items: TrafficLog[];
+  errorCount: number;
+}
+
 export async function fetchTrafficConfig() {
   return unwrapApiResponse(
     await apiClient.get<ApiResponse<TrafficConfig>>("/admin/traffic/config"),
@@ -36,7 +41,7 @@ export async function fetchTrafficLogs({
   sortOrder = "desc",
 }: TrafficLogParams = {}) {
   return unwrapApiResponse(
-    await apiClient.get<ApiResponse<TrafficLog[]>>("/admin/traffic/logs", {
+    await apiClient.get<ApiResponse<TrafficLogsResponse>>("/admin/traffic/logs", {
       params: { errorsOnly, limit, sortOrder },
     }),
   );
