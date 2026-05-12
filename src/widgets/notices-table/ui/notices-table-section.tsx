@@ -42,6 +42,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/shared/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/shared/ui/toggle-group";
 import { DataTable } from "@/widgets/data-table/ui/data-table";
 import { NoticeDetailContent } from "@/widgets/notices-table/ui/notice-detail-content";
@@ -66,21 +73,24 @@ export function NoticesTableSection({
 
   const [page, setPage] = useState(1);
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   useEffect(() => {
     setPage(1);
-  }, [status, search]);
+  }, [status, search, sortOrder]);
 
   const queryParams = useMemo<AdminNoticeListParams>(
     () => ({
       page,
       pageSize: PAGE_SIZE,
+      sortBy: "reportedAt",
+      sortOrder,
       ...(search.trim() ? { query: search.trim() } : {}),
       ...(status ? { status } : {}),
     }),
-    [page, search, status],
+    [page, search, sortOrder, status],
   );
 
   const { data, isLoading, isError, error } = useQuery({
@@ -139,6 +149,8 @@ export function NoticesTableSection({
       const blob = await exportNoticesCSV({
         ...(search.trim() ? { query: search.trim() } : {}),
         ...(status ? { status } : {}),
+        sortBy: "reportedAt",
+        sortOrder,
       });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -287,6 +299,18 @@ export function NoticesTableSection({
   return (
     <div className="space-y-4">
       <div className="flex justify-end gap-2">
+        <Select
+          value={sortOrder}
+          onValueChange={(value) => setSortOrder(value as "asc" | "desc")}
+        >
+          <SelectTrigger className="h-9 w-28">
+            <SelectValue placeholder={t("common.sort.label")} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="desc">{t("common.sort.desc")}</SelectItem>
+            <SelectItem value="asc">{t("common.sort.asc")}</SelectItem>
+          </SelectContent>
+        </Select>
         <Button
           variant="outline"
           size="sm"

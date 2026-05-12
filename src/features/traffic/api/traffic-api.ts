@@ -27,12 +27,17 @@ export async function fetchTrafficConfig() {
 export interface TrafficLogParams {
   errorsOnly?: boolean;
   limit?: number;
+  sortOrder?: "asc" | "desc";
 }
 
-export async function fetchTrafficLogs({ errorsOnly = false, limit = 100 }: TrafficLogParams = {}) {
+export async function fetchTrafficLogs({
+  errorsOnly = false,
+  limit = 100,
+  sortOrder = "desc",
+}: TrafficLogParams = {}) {
   return unwrapApiResponse(
     await apiClient.get<ApiResponse<TrafficLog[]>>("/admin/traffic/logs", {
-      params: { errorsOnly, limit },
+      params: { errorsOnly, limit, sortOrder },
     }),
   );
 }

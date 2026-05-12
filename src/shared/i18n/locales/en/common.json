@@ -19,6 +19,18 @@
       "refresh": "Refresh",
       "save": "Save"
     },
+    "pagination": {
+      "previous": "Previous",
+      "prev": "Previous",
+      "next": "Next",
+      "page": "Page {{current}} / {{total}}",
+      "total": "{{total}} total"
+    },
+    "sort": {
+      "label": "Sort",
+      "asc": "ASC",
+      "desc": "DESC"
+    },
     "loading": "Loading...",
     "feedback": {
       "saved": "Settings have been saved.",

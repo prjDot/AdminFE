@@ -14,6 +14,8 @@ export interface AdminReportListItem {
 export interface AdminReportListParams {
   page?: number;
   pageSize?: number;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
   status?: string;
   targetType?: string;
 }

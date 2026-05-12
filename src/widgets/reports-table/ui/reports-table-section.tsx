@@ -49,21 +49,24 @@ export function ReportsTableSection() {
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [targetTypeFilter, setTargetTypeFilter] = useState<string>("ALL");
 
   useEffect(() => {
     setPage(1);
-  }, [statusFilter, targetTypeFilter]);
+  }, [sortOrder, statusFilter, targetTypeFilter]);
 
   const queryParams = useMemo<AdminReportListParams>(
     () => ({
       page,
       pageSize: PAGE_SIZE,
+      sortBy: "lastReportedAt",
+      sortOrder,
       ...(statusFilter !== "ALL" ? { status: statusFilter } : {}),
       ...(targetTypeFilter !== "ALL" ? { targetType: targetTypeFilter } : {}),
     }),
-    [page, statusFilter, targetTypeFilter],
+    [page, sortOrder, statusFilter, targetTypeFilter],
   );
 
   const { data, isLoading, isError, error } = useQuery({
@@ -155,7 +158,9 @@ export function ReportsTableSection() {
       <ReportsToolbar
         statusFilter={statusFilter}
         targetTypeFilter={targetTypeFilter}
+        sortOrder={sortOrder}
         viewMode={viewMode}
+        onSortOrderChange={setSortOrder}
         onStatusFilterChange={setStatusFilter}
         onTargetTypeFilterChange={setTargetTypeFilter}
         onViewModeChange={setViewMode}
@@ -225,6 +230,8 @@ export function ReportsTableSection() {
   async function handleExportCSV(status: string, targetType: string) {
     try {
       const blob = await exportReportsCSV({
+        sortBy: "lastReportedAt",
+        sortOrder,
         ...(status !== "ALL" ? { status } : {}),
         ...(targetType !== "ALL" ? { targetType } : {}),
       });
@@ -247,7 +254,9 @@ export function ReportsTableSection() {
 function ReportsToolbar({
   statusFilter,
   targetTypeFilter,
+  sortOrder,
   viewMode,
+  onSortOrderChange,
   onStatusFilterChange,
   onTargetTypeFilterChange,
   onViewModeChange,
@@ -255,7 +264,9 @@ function ReportsToolbar({
 }: {
   statusFilter: string;
   targetTypeFilter: string;
+  sortOrder: "asc" | "desc";
   viewMode: "list" | "grid";
+  onSortOrderChange: (value: "asc" | "desc") => void;
   onStatusFilterChange: (value: string) => void;
   onTargetTypeFilterChange: (value: string) => void;
   onViewModeChange: (value: "list" | "grid") => void;
@@ -294,6 +305,18 @@ function ReportsToolbar({
                 {opt.label}
               </SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={sortOrder}
+          onValueChange={(value) => onSortOrderChange(value as "asc" | "desc")}
+        >
+          <SelectTrigger className="h-9 w-28">
+            <SelectValue placeholder={t("common.sort.label")} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="desc">{t("common.sort.desc")}</SelectItem>
+            <SelectItem value="asc">{t("common.sort.asc")}</SelectItem>
           </SelectContent>
         </Select>
       </div>

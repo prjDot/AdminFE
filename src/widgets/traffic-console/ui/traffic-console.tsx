@@ -14,6 +14,13 @@ import {
   CardTitle,
 } from "@/shared/ui/card";
 import { Label } from "@/shared/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/ui/select";
 import { Switch } from "@/shared/ui/switch";
 import {
   ALL_TRAFFIC_GROUP,
@@ -25,17 +32,32 @@ export function TrafficConsole() {
   const { t } = useTranslation();
   const [selectedGroup, setSelectedGroup] = useState(ALL_TRAFFIC_GROUP);
   const [errorsOnly, setErrorsOnly] = useState(false);
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const { data: config } = useTrafficConfig();
-  const { data: logs = [], isError, isLoading } = useTrafficLogs(100, errorsOnly);
+  const { data: logs = [], isError, isLoading } = useTrafficLogs(
+    100,
+    errorsOnly,
+    sortOrder,
+  );
+
+  const sortedLogs = useMemo(
+    () =>
+      [...logs].sort((a, b) => {
+        const left = new Date(a.timestamp).getTime();
+        const right = new Date(b.timestamp).getTime();
+        return sortOrder === "asc" ? left - right : right - left;
+      }),
+    [logs, sortOrder],
+  );
 
   const grouped = useMemo(() => {
-    const next = new Map<string, typeof logs>();
-    logs.forEach((log) => {
+    const next = new Map<string, typeof sortedLogs>();
+    sortedLogs.forEach((log) => {
       const key = getTrafficGroupKey(log.path);
       next.set(key, [...(next.get(key) ?? []), log]);
     });
     return Array.from(next.entries()).sort(([a], [b]) => a.localeCompare(b));
-  }, [logs]);
+  }, [sortedLogs]);
 
   useEffect(() => {
     if (
@@ -48,10 +70,13 @@ export function TrafficConsole() {
 
   const visibleLogs =
     selectedGroup === ALL_TRAFFIC_GROUP
-      ? logs
-      : logs.filter((log) => getTrafficGroupKey(log.path) === selectedGroup);
+      ? sortedLogs
+      : sortedLogs.filter((log) => getTrafficGroupKey(log.path) === selectedGroup);
 
-  const stats = useMemo(() => getTrafficStats(logs, grouped.length), [logs, grouped]);
+  const stats = useMemo(
+    () => getTrafficStats(sortedLogs, grouped.length),
+    [sortedLogs, grouped],
+  );
 
   return (
     <section className="mx-auto max-w-screen-xl px-4 pb-8 sm:px-8">
@@ -91,6 +116,24 @@ export function TrafficConsole() {
             <div className="flex items-center justify-between gap-3">
               <p className="text-sm font-medium">{t("traffic.filters")}</p>
               <div className="flex items-center gap-3">
+                <Label
+                  htmlFor="traffic-sort-order"
+                  className="text-xs text-muted-foreground"
+                >
+                  {t("common.sort.label")}
+                </Label>
+                <Select
+                  value={sortOrder}
+                  onValueChange={(value) => setSortOrder(value as "asc" | "desc")}
+                >
+                  <SelectTrigger id="traffic-sort-order" className="h-8 w-28">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="desc">{t("common.sort.desc")}</SelectItem>
+                    <SelectItem value="asc">{t("common.sort.asc")}</SelectItem>
+                  </SelectContent>
+                </Select>
                 <Label
                   htmlFor="traffic-errors-only"
                   className="text-xs text-muted-foreground"

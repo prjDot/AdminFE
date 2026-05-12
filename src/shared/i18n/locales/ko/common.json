@@ -19,6 +19,18 @@
       "refresh": "새로고침",
       "save": "저장"
     },
+    "pagination": {
+      "previous": "이전",
+      "prev": "이전",
+      "next": "다음",
+      "page": "{{current}} / {{total}} 페이지",
+      "total": "총 {{total}}건"
+    },
+    "sort": {
+      "label": "정렬",
+      "asc": "ASC",
+      "desc": "DESC"
+    },
     "loading": "로딩 중입니다...",
     "feedback": {
       "saved": "설정이 저장되었습니다.",

@@ -33,6 +33,13 @@ import {
   DropdownMenuTrigger,
 } from "@/shared/ui/dropdown-menu";
 import { Input } from "@/shared/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/shared/ui/toggle-group";
 import { DataTable } from "@/widgets/data-table/ui/data-table";
 import { CommunityDetailSheet } from "./community-detail-sheet";
@@ -53,6 +60,7 @@ export function CommunityTableSection() {
   // ── UI state ────────────────────────────────────────────────────────────────
   const [page, setPage] = useState(1);
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebouncedValue(query);
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
@@ -61,16 +69,18 @@ export function CommunityTableSection() {
   // Reset to page 1 when search query changes
   useEffect(() => {
     setPage(1);
-  }, [debouncedQuery]);
+  }, [debouncedQuery, sortOrder]);
 
   // ── Query params ─────────────────────────────────────────────────────────────
   const queryParams = useMemo<AdminCommunityPostListParams>(
     () => ({
       page,
       pageSize: PAGE_SIZE,
+      sortBy: "createdAt",
+      sortOrder,
       ...(debouncedQuery.trim() ? { query: debouncedQuery.trim() } : {}),
     }),
-    [page, debouncedQuery],
+    [page, debouncedQuery, sortOrder],
   );
 
   // ── Queries ───────────────────────────────────────────────────────────────────
@@ -264,21 +274,35 @@ export function CommunityTableSection() {
           onChange={(e) => setQuery(e.target.value)}
           className="max-w-sm"
         />
-        <ToggleGroup
-          type="single"
-          value={viewMode}
-          onValueChange={(value: string) =>
-            value && setViewMode(value as "list" | "grid")
-          }
-          className="rounded-md border bg-card"
-        >
-          <ToggleGroupItem value="list" aria-label={t("common.view.list")}>
-            <List className="h-4 w-4" />
-          </ToggleGroupItem>
-          <ToggleGroupItem value="grid" aria-label={t("common.view.grid")}>
-            <LayoutGrid className="h-4 w-4" />
-          </ToggleGroupItem>
-        </ToggleGroup>
+        <div className="flex items-center gap-2">
+          <Select
+            value={sortOrder}
+            onValueChange={(value) => setSortOrder(value as "asc" | "desc")}
+          >
+            <SelectTrigger className="h-9 w-28">
+              <SelectValue placeholder={t("common.sort.label")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="desc">{t("common.sort.desc")}</SelectItem>
+              <SelectItem value="asc">{t("common.sort.asc")}</SelectItem>
+            </SelectContent>
+          </Select>
+          <ToggleGroup
+            type="single"
+            value={viewMode}
+            onValueChange={(value: string) =>
+              value && setViewMode(value as "list" | "grid")
+            }
+            className="rounded-md border bg-card"
+          >
+            <ToggleGroupItem value="list" aria-label={t("common.view.list")}>
+              <List className="h-4 w-4" />
+            </ToggleGroupItem>
+            <ToggleGroupItem value="grid" aria-label={t("common.view.grid")}>
+              <LayoutGrid className="h-4 w-4" />
+            </ToggleGroupItem>
+          </ToggleGroup>
+        </div>
       </div>
 
       {/* Content */}

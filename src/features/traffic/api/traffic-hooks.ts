@@ -10,10 +10,14 @@ export function useTrafficConfig() {
   });
 }
 
-export function useTrafficLogs(limit = 100, errorsOnly = false) {
+export function useTrafficLogs(
+  limit = 100,
+  errorsOnly = false,
+  sortOrder: "asc" | "desc" = "desc",
+) {
   return useQuery({
-    queryKey: queryKeys.traffic.logs({ errorsOnly, limit }),
-    queryFn: () => fetchTrafficLogs({ errorsOnly, limit }),
+    queryKey: queryKeys.traffic.logs({ errorsOnly, limit, sortOrder }),
+    queryFn: () => fetchTrafficLogs({ errorsOnly, limit, sortOrder }),
     refetchInterval: 2_000,
     staleTime: 1_000,
   });
