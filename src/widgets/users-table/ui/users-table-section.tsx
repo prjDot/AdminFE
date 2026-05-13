@@ -144,6 +144,32 @@ export function UsersTableSection() {
   }, []);
 
   useEffect(() => {
+    const reportPresenceError = (message: string) => {
+      if (import.meta.env.DEV && typeof reportError === "function") {
+        reportError(new Error(`[presence] ${message}`));
+      }
+    };
+
+    const reportUnknownPresenceEvent = (body: string) => {
+      if (!import.meta.env.DEV || typeof reportError !== "function") {
+        return;
+      }
+
+      try {
+        const payload = JSON.parse(body) as { type?: unknown };
+        if (typeof payload.type === "string") {
+          reportError(
+            new Error(`[presence] Unknown event type received: ${payload.type}`),
+          );
+          return;
+        }
+      } catch {
+        // Ignore parse failures for unknown MESSAGE payloads.
+      }
+
+      reportError(new Error("[presence] Unknown MESSAGE payload received."));
+    };
+
     const clearReconnectTimer = () => {
       if (!reconnectTimerRef.current) return;
       clearTimeout(reconnectTimerRef.current);
@@ -153,7 +179,10 @@ export function UsersTableSection() {
     const scheduleReconnect = () => {
       clearReconnectTimer();
       reconnectAttemptRef.current += 1;
-      const delay = Math.min(1000 * 2 ** reconnectAttemptRef.current, 15_000);
+      const delay = Math.min(
+        1000 * 2 ** Math.max(0, reconnectAttemptRef.current - 1),
+        15_000,
+      );
       reconnectTimerRef.current = setTimeout(() => {
         connect();
       }, delay);
@@ -202,17 +231,17 @@ export function UsersTableSection() {
           const parsed = JSON.parse(body) as { message?: string };
           const message = parsed?.message ?? body;
           if (message) {
-            console.warn("[presence] STOMP error:", message);
+            reportPresenceError(`STOMP error frame: ${message}`);
           }
         } catch {
           if (body) {
-            console.warn("[presence] STOMP error:", body);
+            reportPresenceError(`STOMP error frame: ${body}`);
           }
         }
         try {
           socketRef.current?.close();
         } catch {
-          return;
+          scheduleReconnect();
         }
         return;
       }
@@ -220,7 +249,10 @@ export function UsersTableSection() {
       if (command !== "MESSAGE") return;
 
       const event = parsePresenceEvent(body);
-      if (!event) return;
+      if (!event) {
+        reportUnknownPresenceEvent(body);
+        return;
+      }
 
       setPresenceByUserId((prev) => ({
         ...prev,

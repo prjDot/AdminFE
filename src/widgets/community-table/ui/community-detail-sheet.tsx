@@ -75,7 +75,7 @@ export function CommunityDetailSheet({
 
 function PostOverview({ postDetail }: { postDetail: AdminCommunityPostDetail }) {
   const { t } = useTranslation();
-  const imageUrls = normalizeImageUrls(postDetail.images);
+  const imageUrls = resolvePostImageUrls(postDetail);
 
   return (
     <div className="space-y-4">
@@ -346,7 +346,6 @@ function ImagePreview({ src, index }: { src: string; index: number }) {
           alt={`community-image-${index + 1}`}
           className="h-44 w-full object-cover"
           loading="lazy"
-          referrerPolicy="no-referrer"
           onError={() => setFailed(true)}
         />
       )}
@@ -354,29 +353,140 @@ function ImagePreview({ src, index }: { src: string; index: number }) {
   );
 }
 
-function normalizeImageUrls(images: unknown): string[] {
-  if (!images) return [];
-  if (Array.isArray(images)) {
-    return images
-      .filter((image): image is string => typeof image === "string")
-      .map((image) => image.trim())
-      .filter(Boolean);
+const IMAGE_API_ORIGIN = resolveImageApiOrigin();
+const IMAGE_URL_KEYS = [
+  "url",
+  "imageUrl",
+  "imageURL",
+  "src",
+  "path",
+  "fileUrl",
+  "thumbnailUrl",
+] as const;
+
+function resolveImageApiOrigin() {
+  const envBaseUrl = (import.meta.env.VITE_API_URL as string | undefined)?.trim();
+  const defaultOrigin = "https://paw.gbsw.hs.kr";
+
+  if (!envBaseUrl || envBaseUrl.startsWith("/")) {
+    return defaultOrigin;
   }
-  if (typeof images === "string") {
-    const trimmed = images.trim();
+
+  try {
+    return new URL(envBaseUrl).origin;
+  } catch {
+    return defaultOrigin;
+  }
+}
+
+function resolvePostImageUrls(postDetail: AdminCommunityPostDetail) {
+  const extraKeys = [
+    "imageUrls",
+    "imageUrl",
+    "thumbnailUrl",
+    "attachments",
+    "media",
+    "photos",
+  ] as const;
+  const postRecord = postDetail as Record<string, unknown>;
+  const candidates: unknown[] = [postDetail.images];
+
+  for (const key of extraKeys) {
+    if (key in postRecord) {
+      candidates.push(postRecord[key]);
+    }
+  }
+
+  return Array.from(
+    new Set(candidates.flatMap((candidate) => normalizeImageUrls(candidate))),
+  );
+}
+
+function normalizeImageUrls(images: unknown): string[] {
+  const values = unwrapImageValues(images);
+
+  return values
+    .flatMap((value) => extractImageStrings(value))
+    .map((value) => resolveImageUrl(value))
+    .filter((value): value is string => Boolean(value));
+}
+
+function unwrapImageValues(value: unknown): unknown[] {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
     if (!trimmed) return [];
+
     try {
-      const parsed = JSON.parse(trimmed) as unknown;
-      if (Array.isArray(parsed)) {
-        return parsed
-          .filter((image): image is string => typeof image === "string")
-          .map((image) => image.trim())
+      return unwrapImageValues(JSON.parse(trimmed) as unknown);
+    } catch {
+      if (trimmed.includes(",")) {
+        return trimmed
+          .split(",")
+          .map((token) => token.trim())
           .filter(Boolean);
       }
-    } catch {
       return [trimmed];
     }
-    return [];
   }
+
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+
+    if (Array.isArray(record.items)) {
+      return record.items;
+    }
+
+    for (const key of IMAGE_URL_KEYS) {
+      if (key in record) {
+        return [record[key]];
+      }
+    }
+  }
+
   return [];
+}
+
+function extractImageStrings(value: unknown): string[] {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed ? [trimmed] : [];
+  }
+
+  if (Array.isArray(value)) {
+    return value.flatMap((entry) => extractImageStrings(entry));
+  }
+
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    for (const key of IMAGE_URL_KEYS) {
+      if (key in record) {
+        return extractImageStrings(record[key]);
+      }
+    }
+  }
+
+  return [];
+}
+
+function resolveImageUrl(rawUrl: string): string | null {
+  const trimmed = rawUrl.trim().replace(/^"+|"+$/g, "");
+  if (!trimmed) return null;
+
+  if (trimmed.startsWith("data:") || trimmed.startsWith("blob:")) {
+    return trimmed;
+  }
+
+  if (trimmed.startsWith("//")) {
+    return encodeURI(`https:${trimmed}`);
+  }
+
+  try {
+    return encodeURI(new URL(trimmed).toString());
+  } catch {
+    const normalizedPath = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+    return encodeURI(`${IMAGE_API_ORIGIN}${normalizedPath}`);
+  }
 }
