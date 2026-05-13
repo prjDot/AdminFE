@@ -11,6 +11,9 @@ export interface AdminUserListItem {
   email: string;
   role: string;
   status: string;
+  presence?: "ONLINE" | "IDLE" | "OFFLINE";
+  presenceConnectionState?: "connected" | "disconnected";
+  presenceLastActiveAt?: string | null;
   createdAt: string;
   lastLoginAt: string | null;
 }

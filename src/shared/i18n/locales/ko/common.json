@@ -197,6 +197,7 @@
       "email": "이메일",
       "role": "권한",
       "status": "상태",
+      "presence": "접속 상태",
       "joined": "가입일",
       "actions": "작업",
       "openMenu": "메뉴 열기"
@@ -257,6 +258,15 @@
       "userPermission": "사용자 권한",
       "verifiedAt": "인증 완료: {{date}}",
       "failed": "권한 상태를 불러오지 못했습니다."
+    },
+    "presence": {
+      "online": "ONLINE",
+      "idle": "IDLE",
+      "offline": "OFFLINE",
+      "connected": "연결됨",
+      "disconnected": "연결 끊김",
+      "connection": "연결 상태: {{state}}",
+      "lastActiveAt": "마지막 활동: {{date}}"
     }
   },
   "notices": {

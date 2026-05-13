@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ColumnDef } from "@tanstack/react-table";
+import type { TFunction } from "i18next";
 import {
   Download,
   Filter,
@@ -195,6 +196,18 @@ export function UsersTableSection() {
         },
       },
       {
+        id: "presence",
+        header: t("users.table.presence", "Presence"),
+        cell: ({ row }) => {
+          const user = row.original;
+          return (
+            <Badge variant="outline" title={getPresenceDetailLabel(user, t)}>
+              {getPresenceLabel(user.presence, t)}
+            </Badge>
+          );
+        },
+      },
+      {
         accessorKey: "createdAt",
         header: t("users.table.joined"),
         cell: ({ row }) => formatDate(row.getValue("createdAt")),
@@ -367,6 +380,8 @@ export function UsersTableSection() {
               statusLabel={(status) =>
                 t(`common.status.${status.toLowerCase()}`, status)
               }
+              presenceLabel={(presence) => getPresenceLabel(presence, t)}
+              presenceDetailLabel={(user) => getPresenceDetailLabel(user, t)}
               emptyLabel={t("table.noResults")}
               emailLabel={t("users.table.email")}
               roleLabel={t("users.table.role")}
@@ -402,6 +417,37 @@ function formatDate(value: unknown) {
 function copyUserId(userId: string, successMessage: string) {
   void navigator.clipboard.writeText(userId);
   toast.success(successMessage);
+}
+
+function formatDateTime(value?: string | null) {
+  return value ? new Date(value).toLocaleString("ko-KR") : "-";
+}
+
+function getPresenceLabel(
+  presence: string | undefined,
+  t: TFunction,
+) {
+  const normalized = (presence ?? "OFFLINE").toLowerCase();
+  return t(`users.presence.${normalized}`, { defaultValue: presence ?? "OFFLINE" });
+}
+
+function getPresenceDetailLabel(
+  user: AdminUserListItem,
+  t: TFunction,
+) {
+  return [
+    t("users.presence.connection", {
+      defaultValue: "연결 상태: {{state}}",
+      state:
+        user.presenceConnectionState === "connected"
+          ? t("users.presence.connected", "connected")
+          : t("users.presence.disconnected", "disconnected"),
+    }),
+    t("users.presence.lastActiveAt", {
+      defaultValue: "마지막 활동: {{date}}",
+      date: formatDateTime(user.presenceLastActiveAt),
+    }),
+  ].join(" · ");
 }
 
 function UsersLoadingState() {

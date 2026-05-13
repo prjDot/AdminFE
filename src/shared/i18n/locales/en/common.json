@@ -197,6 +197,7 @@
       "email": "Email",
       "role": "Role",
       "status": "Status",
+      "presence": "Presence",
       "joined": "Joined",
       "actions": "Actions",
       "openMenu": "Open menu"
@@ -257,6 +258,15 @@
       "userPermission": "User permission",
       "verifiedAt": "Verified at: {{date}}",
       "failed": "Failed to load permission status."
+    },
+    "presence": {
+      "online": "ONLINE",
+      "idle": "IDLE",
+      "offline": "OFFLINE",
+      "connected": "Connected",
+      "disconnected": "Disconnected",
+      "connection": "Connection: {{state}}",
+      "lastActiveAt": "Last Active: {{date}}"
     }
   },
   "notices": {

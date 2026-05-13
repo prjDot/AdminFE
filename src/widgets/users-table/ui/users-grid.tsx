@@ -8,6 +8,8 @@ interface UsersGridProps {
   items: AdminUserListItem[];
   onUserClick: (user: AdminUserListItem) => void;
   statusLabel: (status: string) => string;
+  presenceLabel: (presence?: string) => string;
+  presenceDetailLabel: (user: AdminUserListItem) => string;
   emptyLabel: string;
   emailLabel: string;
   roleLabel: string;
@@ -17,6 +19,8 @@ export function UsersGrid({
   items,
   onUserClick,
   statusLabel,
+  presenceLabel,
+  presenceDetailLabel,
   emptyLabel,
   emailLabel,
   roleLabel,
@@ -49,6 +53,16 @@ export function UsersGrid({
             </Badge>
           </CardHeader>
           <CardContent className="space-y-2 pt-4 text-sm">
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span>Presence</span>
+              <Badge
+                variant="outline"
+                className="font-normal"
+                title={presenceDetailLabel(user)}
+              >
+                {presenceLabel(user.presence)}
+              </Badge>
+            </div>
             <div className="flex items-center justify-between text-muted-foreground">
               <span className="flex items-center gap-1">
                 <Mail className="h-3 w-3" />
