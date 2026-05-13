@@ -54,8 +54,8 @@ import { getStatusVariant, isUserSuspended } from "./user-table-utils";
 const PAGE_SIZE = 20;
 const PRESENCE_TOPIC = "/topic/admin/presence";
 const PRESENCE_SUBSCRIPTION_ID = "sub-admin-presence";
-const WS_HOST = "paw.gbsw.hs.kr";
-const WS_URL = "wss://paw.gbsw.hs.kr/ws/chat";
+const WS_URL = import.meta.env.VITE_WS_URL ?? "wss://paw.gbsw.hs.kr/ws/chat";
+const WS_HOST = import.meta.env.VITE_WS_HOST ?? "paw.gbsw.hs.kr";
 
 type PresencePatch = Pick<
   AdminUserListItem,
@@ -78,6 +78,9 @@ export function UsersTableSection() {
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [accessToken, setAccessToken] = useState<string | null>(() =>
+    readStoredAdminAccessToken(),
+  );
   const [presenceByUserId, setPresenceByUserId] = useState<
     Record<string, PresencePatch>
   >({});
@@ -120,8 +123,25 @@ export function UsersTableSection() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   useEffect(() => {
-    const token = readStoredAdminAccessToken();
-    if (!token) return;
+    const syncToken = () => {
+      setAccessToken((prev) => {
+        const next = readStoredAdminAccessToken();
+        return prev === next ? prev : next;
+      });
+    };
+
+    syncToken();
+    window.addEventListener("storage", syncToken);
+    const pollTimer = window.setInterval(syncToken, 1000);
+
+    return () => {
+      window.removeEventListener("storage", syncToken);
+      window.clearInterval(pollTimer);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!accessToken) return;
 
     let socket: WebSocket | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -182,6 +202,26 @@ export function UsersTableSection() {
         return;
       }
 
+      if (command === "ERROR") {
+        try {
+          const parsed = JSON.parse(body) as { message?: string };
+          const message = parsed?.message ?? body;
+          if (message) {
+            console.warn("[presence] STOMP error:", message);
+          }
+        } catch {
+          if (body) {
+            console.warn("[presence] STOMP error:", body);
+          }
+        }
+        try {
+          socket?.close();
+        } catch {
+          return;
+        }
+        return;
+      }
+
       if (command !== "MESSAGE") return;
 
       const event = parsePresenceEvent(body);
@@ -208,7 +248,7 @@ export function UsersTableSection() {
             "CONNECT",
             "accept-version:1.2",
             `host:${WS_HOST}`,
-            `Authorization:Bearer ${token}`,
+            `Authorization: Bearer ${accessToken}`,
             "",
             "\0",
           ].join("\n"),
@@ -243,7 +283,7 @@ export function UsersTableSection() {
         return;
       }
     };
-  }, []);
+  }, [accessToken]);
 
   const { mutate: mutateSuspend } = useMutation({
     mutationFn: (userId: string) => suspendUser(userId),

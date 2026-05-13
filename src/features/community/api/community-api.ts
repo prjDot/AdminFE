@@ -73,21 +73,24 @@ export interface AdminCommunityPostDetail {
   category: string;
   createdAt: string;
   comments: AdminCommunityComment[] | number;
+  commentsDetail?: AdminCommunityComment[];
   reportCount: number;
   likes?: number;
   tags?: string[];
   images?: string[];
   poll?: {
     question: string;
-    options: AdminCommunityPollOption[];
+    options: AdminCommunityPollOption[] | string[];
     totalVotes: number;
   } | null;
   votes?: {
+    items?: AdminCommunityVoteItem[];
     total: number;
     countByOption: Record<string, number>;
     voters: AdminCommunityVoteItem[];
   } | null;
   reactions?: {
+    counts?: Record<string, number>;
     total: number;
     countByType: Record<string, number>;
     reactors: AdminCommunityReactionItem[];

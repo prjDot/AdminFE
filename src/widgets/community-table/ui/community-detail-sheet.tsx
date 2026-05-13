@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import type { ReactNode } from "react";
 import type {
   AdminCommunityComment,
+  AdminCommunityPollOption,
   AdminCommunityPostDetail,
 } from "@/features/community/api/community-api";
 import { Badge } from "@/shared/ui/badge";
@@ -57,7 +58,9 @@ export function CommunityDetailSheet({
           <div className="space-y-6 py-6">
             <PostOverview postDetail={postDetail} />
             <PostEngagement postDetail={postDetail} />
-            <PostComments comments={postDetail.comments} />
+            <PostComments
+              comments={resolveCommentDetails(postDetail)}
+            />
             <DetailActions
               postId={selectedPostId}
               onDelete={onDelete}
@@ -99,6 +102,29 @@ function PostOverview({ postDetail }: { postDetail: AdminCommunityPostDetail }) 
         {postDetail.content ?? t("community.detail.noContent", "내용 없음")}
       </div>
 
+      {postDetail.images?.length ? (
+        <Section title={t("community.detail.images", "이미지")}>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {postDetail.images.map((imageUrl, index) => (
+              <a
+                key={`${imageUrl}-${index}`}
+                href={imageUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="overflow-hidden rounded-lg border bg-muted/20"
+              >
+                <img
+                  src={imageUrl}
+                  alt={`community-image-${index + 1}`}
+                  className="h-44 w-full object-cover"
+                  loading="lazy"
+                />
+              </a>
+            ))}
+          </div>
+        </Section>
+      ) : null}
+
       <div className="grid grid-cols-3 gap-3 rounded-lg border bg-card p-4">
         <Stat label={t("community.table.likes")} value={postDetail.likes ?? 0} />
         <Stat
@@ -116,6 +142,11 @@ function PostOverview({ postDetail }: { postDetail: AdminCommunityPostDetail }) 
 
 function PostEngagement({ postDetail }: { postDetail: AdminCommunityPostDetail }) {
   const { t } = useTranslation();
+  const pollOptions = normalizePollOptions(postDetail.poll?.options);
+  const voteItems = postDetail.votes?.items ?? postDetail.votes?.voters ?? [];
+  const reactionCounts =
+    postDetail.reactions?.counts ?? postDetail.reactions?.countByType ?? {};
+  const reactionItems = postDetail.reactions?.reactors ?? [];
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
@@ -123,7 +154,7 @@ function PostEngagement({ postDetail }: { postDetail: AdminCommunityPostDetail }
         <Section title={t("community.detail.poll", "투표")}>
           <p className="text-sm font-medium">{postDetail.poll.question}</p>
           <div className="mt-3 space-y-2">
-            {postDetail.poll.options.map((option) => (
+            {pollOptions.map((option) => (
               <KeyValue
                 key={option.option}
                 label={option.option}
@@ -135,9 +166,9 @@ function PostEngagement({ postDetail }: { postDetail: AdminCommunityPostDetail }
       )}
       {postDetail.votes && (
         <Section title={t("community.detail.votes", "투표자")}>
-          <KeyValue label="total" value={postDetail.votes.total} />
+          <KeyValue label="total" value={postDetail.votes.total ?? voteItems.length} />
           <PersonList
-            items={postDetail.votes.voters.map((voter) => ({
+            items={voteItems.map((voter) => ({
               id: voter.voteId,
               name: voter.userName,
               meta: voter.selectedOption,
@@ -148,14 +179,14 @@ function PostEngagement({ postDetail }: { postDetail: AdminCommunityPostDetail }
       {postDetail.reactions && (
         <Section title={t("community.detail.reactions", "반응")}>
           <div className="mb-3 flex flex-wrap gap-2">
-            {Object.entries(postDetail.reactions.countByType).map(([type, count]) => (
+            {Object.entries(reactionCounts).map(([type, count]) => (
               <Badge key={type} variant="secondary">
                 {type} {count}
               </Badge>
             ))}
           </div>
           <PersonList
-            items={postDetail.reactions.reactors.map((reactor) => ({
+            items={reactionItems.map((reactor) => ({
               id: reactor.reactionId,
               name: reactor.userName,
               meta: reactor.reactionType,
@@ -167,9 +198,9 @@ function PostEngagement({ postDetail }: { postDetail: AdminCommunityPostDetail }
   );
 }
 
-function PostComments({ comments }: { comments: AdminCommunityPostDetail["comments"] }) {
+function PostComments({ comments }: { comments: AdminCommunityComment[] }) {
   const { t } = useTranslation();
-  if (!Array.isArray(comments) || comments.length === 0) return null;
+  if (comments.length === 0) return null;
 
   return (
     <Section title={t("community.detail.commentDetails", "댓글 상세")}>
@@ -180,6 +211,24 @@ function PostComments({ comments }: { comments: AdminCommunityPostDetail["commen
       </div>
     </Section>
   );
+}
+
+function resolveCommentDetails(postDetail: AdminCommunityPostDetail) {
+  if (Array.isArray(postDetail.commentsDetail)) return postDetail.commentsDetail;
+  if (Array.isArray(postDetail.comments)) return postDetail.comments;
+  return [];
+}
+
+function normalizePollOptions(
+  options?: Array<string | AdminCommunityPollOption>,
+) {
+  if (!options) return [];
+  return options.map((option) => {
+    if (typeof option === "string") {
+      return { option, voteCount: 0 };
+    }
+    return option;
+  });
 }
 
 function CommentItem({ comment }: { comment: AdminCommunityComment }) {
