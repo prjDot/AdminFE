@@ -60,6 +60,7 @@ const statusDotClass: Record<StatusVariant, string> = {
 };
 
 const INTEGRATION_KEYS = new Set(["DATABASE", "REDIS", "FIREBASE", "SHELTER_API"]);
+const HIDDEN_SERVICE_IDS = new Set(["globalstatus", "services"]);
 
 function isIntegrationKey(key: string) {
   return INTEGRATION_KEYS.has(key.toUpperCase());
@@ -85,6 +86,9 @@ export function ServicesOverview() {
 
   const selectedService =
     services.find((s) => s.id === selectedServiceId) ?? null;
+  const visibleServices = services.filter(
+    (service) => !HIDDEN_SERVICE_IDS.has(service.id.toLowerCase()),
+  );
   const selectedMeta = selectedService
     ? SERVICE_META[selectedService.id.toLowerCase()]
     : null;
@@ -163,14 +167,14 @@ export function ServicesOverview() {
                   {t("services.overrideTarget")}
                 </Label>
                 <Select
-                  defaultValue={services[0]?.id ?? ""}
+                  defaultValue={visibleServices[0]?.id ?? ""}
                   onValueChange={(id) => setSelectedServiceId(id)}
                 >
                   <SelectTrigger id="service-target">
                     <SelectValue placeholder={t("services.selectTarget")} />
                   </SelectTrigger>
                   <SelectContent>
-                    {services.map((s) => (
+                    {visibleServices.map((s) => (
                       <SelectItem key={s.id} value={s.id}>
                         {getServiceName(s, t)}
                       </SelectItem>
@@ -203,12 +207,14 @@ export function ServicesOverview() {
             <DialogFooter>
               <Button
                 onClick={() =>
-                  handleServiceAction(selectedServiceId ?? services[0]?.id ?? "")
+                  handleServiceAction(
+                    selectedServiceId ?? visibleServices[0]?.id ?? "",
+                  )
                 }
                 disabled={
                   rebootMutation.isPending ||
                   refreshIntegrationMutation.isPending ||
-                  !selectedServiceId
+                  (!selectedServiceId && !visibleServices[0]?.id)
                 }
               >
                 {rebootMutation.isPending || refreshIntegrationMutation.isPending
@@ -222,7 +228,7 @@ export function ServicesOverview() {
 
       {/* Service Cards */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-        {services.map((service) => {
+        {visibleServices.map((service) => {
           const meta = SERVICE_META[service.id.toLowerCase()];
           const ServiceIcon = meta?.icon ?? Server;
           return (
@@ -367,7 +373,7 @@ export function ServicesOverview() {
       <div className="rounded-xl border bg-card p-6 shadow-sm">
         <h3 className="mb-6 font-semibold">{t("services.recentIncidents")}</h3>
         <div className="space-y-6">
-          {services
+          {visibleServices
             .filter((s) => s.status !== "operational" || s.message)
             .sort(
               (a, b) =>
