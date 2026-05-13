@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import type {
   AdminCommunityComment,
   AdminCommunityPollOption,
@@ -75,6 +75,7 @@ export function CommunityDetailSheet({
 
 function PostOverview({ postDetail }: { postDetail: AdminCommunityPostDetail }) {
   const { t } = useTranslation();
+  const imageUrls = normalizeImageUrls(postDetail.images);
 
   return (
     <div className="space-y-4">
@@ -102,24 +103,11 @@ function PostOverview({ postDetail }: { postDetail: AdminCommunityPostDetail }) 
         {postDetail.content ?? t("community.detail.noContent", "내용 없음")}
       </div>
 
-      {postDetail.images?.length ? (
+      {imageUrls.length ? (
         <Section title={t("community.detail.images", "이미지")}>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {postDetail.images.map((imageUrl, index) => (
-              <a
-                key={`${imageUrl}-${index}`}
-                href={imageUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="overflow-hidden rounded-lg border bg-muted/20"
-              >
-                <img
-                  src={imageUrl}
-                  alt={`community-image-${index + 1}`}
-                  className="h-44 w-full object-cover"
-                  loading="lazy"
-                />
-              </a>
+            {imageUrls.map((imageUrl, index) => (
+              <ImagePreview key={`${imageUrl}-${index}`} src={imageUrl} index={index} />
             ))}
           </div>
         </Section>
@@ -334,4 +322,61 @@ function PersonList({ items }: { items: { id: string; name: string; meta: string
       ))}
     </div>
   );
+}
+
+function ImagePreview({ src, index }: { src: string; index: number }) {
+  const { t } = useTranslation();
+  const [failed, setFailed] = useState(false);
+
+  return (
+    <a
+      href={src}
+      target="_blank"
+      rel="noreferrer"
+      className="overflow-hidden rounded-lg border bg-muted/20"
+    >
+      {failed ? (
+        <div className="flex h-44 flex-col items-center justify-center gap-2 px-3 text-center text-xs text-muted-foreground">
+          <span>{t("community.detail.imageLoadFailed", "이미지를 불러오지 못했습니다.")}</span>
+          <span className="line-clamp-2 break-all">{src}</span>
+        </div>
+      ) : (
+        <img
+          src={src}
+          alt={`community-image-${index + 1}`}
+          className="h-44 w-full object-cover"
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          onError={() => setFailed(true)}
+        />
+      )}
+    </a>
+  );
+}
+
+function normalizeImageUrls(images: unknown): string[] {
+  if (!images) return [];
+  if (Array.isArray(images)) {
+    return images
+      .filter((image): image is string => typeof image === "string")
+      .map((image) => image.trim())
+      .filter(Boolean);
+  }
+  if (typeof images === "string") {
+    const trimmed = images.trim();
+    if (!trimmed) return [];
+    try {
+      const parsed = JSON.parse(trimmed) as unknown;
+      if (Array.isArray(parsed)) {
+        return parsed
+          .filter((image): image is string => typeof image === "string")
+          .map((image) => image.trim())
+          .filter(Boolean);
+      }
+    } catch {
+      return [trimmed];
+    }
+    return [];
+  }
+  return [];
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ColumnDef } from "@tanstack/react-table";
 import type { TFunction } from "i18next";
@@ -84,6 +84,9 @@ export function UsersTableSection() {
   const [presenceByUserId, setPresenceByUserId] = useState<
     Record<string, PresencePatch>
   >({});
+  const socketRef = useRef<WebSocket | null>(null);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reconnectAttemptRef = useRef(0);
 
   useEffect(() => {
     setPage(1);
@@ -141,25 +144,17 @@ export function UsersTableSection() {
   }, []);
 
   useEffect(() => {
-    if (!accessToken) return;
-
-    let socket: WebSocket | null = null;
-    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-    let reconnectAttempt = 0;
-    let unmounted = false;
-
     const clearReconnectTimer = () => {
-      if (!reconnectTimer) return;
-      clearTimeout(reconnectTimer);
-      reconnectTimer = null;
+      if (!reconnectTimerRef.current) return;
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
     };
 
     const scheduleReconnect = () => {
-      if (unmounted) return;
       clearReconnectTimer();
-      reconnectAttempt += 1;
-      const delay = Math.min(1000 * 2 ** reconnectAttempt, 15_000);
-      reconnectTimer = setTimeout(() => {
+      reconnectAttemptRef.current += 1;
+      const delay = Math.min(1000 * 2 ** reconnectAttemptRef.current, 15_000);
+      reconnectTimerRef.current = setTimeout(() => {
         connect();
       }, delay);
     };
@@ -190,7 +185,7 @@ export function UsersTableSection() {
       const body = bodyParts.join("\n\n");
 
       if (command === "CONNECTED") {
-        socket?.send(
+        socketRef.current?.send(
           [
             "SUBSCRIBE",
             `id:${PRESENCE_SUBSCRIPTION_ID}`,
@@ -215,7 +210,7 @@ export function UsersTableSection() {
           }
         }
         try {
-          socket?.close();
+          socketRef.current?.close();
         } catch {
           return;
         }
@@ -237,25 +232,43 @@ export function UsersTableSection() {
       }));
     };
 
-    const connect = () => {
-      if (unmounted) return;
-      socket = new WebSocket(WS_URL);
+    const closeSocket = () => {
+      const current = socketRef.current;
+      if (!current) return;
+      current.onopen = null;
+      current.onmessage = null;
+      current.onerror = null;
+      current.onclose = null;
+      try {
+        current.close();
+      } catch {
+        // no-op
+      }
+      socketRef.current = null;
+    };
 
-      socket.onopen = () => {
-        reconnectAttempt = 0;
-        socket?.send(
+    const connect = () => {
+      const latestToken = readStoredAdminAccessToken();
+      if (!latestToken) return;
+
+      closeSocket();
+      socketRef.current = new WebSocket(WS_URL);
+
+      socketRef.current.onopen = () => {
+        reconnectAttemptRef.current = 0;
+        socketRef.current?.send(
           [
             "CONNECT",
             "accept-version:1.2",
             `host:${WS_HOST}`,
-            `Authorization: Bearer ${accessToken}`,
+            `Authorization: Bearer ${latestToken}`,
             "",
             "\0",
           ].join("\n"),
         );
       };
 
-      socket.onmessage = (event) => {
+      socketRef.current.onmessage = (event) => {
         const raw = String(event.data ?? "");
         const frames = raw.split("\0").map((entry) => entry.trim()).filter(Boolean);
         for (const frame of frames) {
@@ -263,25 +276,25 @@ export function UsersTableSection() {
         }
       };
 
-      socket.onerror = () => {
-        socket?.close();
+      socketRef.current.onerror = () => {
+        socketRef.current?.close();
       };
 
-      socket.onclose = () => {
+      socketRef.current.onclose = () => {
         scheduleReconnect();
       };
     };
 
-    connect();
+    if (accessToken) {
+      connect();
+    } else {
+      clearReconnectTimer();
+      closeSocket();
+    }
 
     return () => {
-      unmounted = true;
       clearReconnectTimer();
-      try {
-        socket?.close();
-      } catch {
-        return;
-      }
+      closeSocket();
     };
   }, [accessToken]);
 
