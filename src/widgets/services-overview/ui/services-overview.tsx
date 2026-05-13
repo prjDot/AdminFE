@@ -1,7 +1,5 @@
 import { useState, type ElementType } from "react";
 import {
-  AlertTriangle,
-  CheckCircle2,
   Database,
   Image as ImageIcon,
   RefreshCw,
@@ -61,13 +59,6 @@ const statusDotClass: Record<StatusVariant, string> = {
   maintenance: "bg-secondary",
 };
 
-const statusContainerClass: Record<StatusVariant, string> = {
-  operational: "bg-success/20 text-success",
-  degraded: "bg-warning/20 text-warning-foreground",
-  outage: "bg-destructive/20 text-destructive",
-  maintenance: "bg-secondary/20 text-secondary-foreground",
-};
-
 const INTEGRATION_KEYS = new Set(["DATABASE", "REDIS", "FIREBASE", "SHELTER_API"]);
 
 function isIntegrationKey(key: string) {
@@ -98,7 +89,6 @@ export function ServicesOverview() {
     ? SERVICE_META[selectedService.id.toLowerCase()]
     : null;
   const SelectedIcon = selectedMeta?.icon ?? Server;
-  const globalStatus = deriveGlobalStatus(services);
 
   const handleServiceAction = (targetId: string) => {
     if (!targetId) return;
@@ -230,38 +220,7 @@ export function ServicesOverview() {
         </Dialog>
       </div>
 
-      {/* Global Status Banner */}
-      <div className="relative flex w-full items-center justify-between overflow-hidden rounded-xl border p-6">
-        <div
-          className={`absolute inset-0 opacity-10 ${statusDotClass[globalStatus]}`}
-        />
-        <div className="relative z-10 flex items-center gap-4">
-          <div
-            className={`rounded-full p-3 ${statusContainerClass[globalStatus]}`}
-          >
-            {globalStatus === "operational" ? (
-              <CheckCircle2 className="h-8 w-8" />
-            ) : (
-              <AlertTriangle className="h-8 w-8" />
-            )}
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold">
-              {globalStatus === "operational"
-                ? t("services.status.allOperational")
-                : t("services.status.partialOutage")}
-            </h2>
-            <p className="mt-1 text-muted-foreground">
-              {t("services.dashboardRefresh")}
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* Service Cards */}
-      <h3 className="text-xl font-semibold tracking-tight">
-        {t("services.coreServices")}
-      </h3>
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
         {services.map((service) => {
           const meta = SERVICE_META[service.id.toLowerCase()];
@@ -447,13 +406,6 @@ export function ServicesOverview() {
 function getServiceName(service: ServiceStatus, t: (key: string) => string) {
   const meta = SERVICE_META[service.id.toLowerCase()];
   return meta?.nameKey ? t(meta.nameKey) : service.name;
-}
-
-function deriveGlobalStatus(services: ServiceStatus[]): StatusVariant {
-  if (services.some((s) => s.status === "outage")) return "outage";
-  if (services.some((s) => s.status === "degraded")) return "degraded";
-  if (services.some((s) => s.status === "maintenance")) return "maintenance";
-  return "operational";
 }
 
 function formatTime(isoString: string): string {

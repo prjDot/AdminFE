@@ -96,12 +96,13 @@ export function NotificationHistoryPanel() {
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
               >
-                {t("common.pagination.previous")}
+                {t("common.pagination.previous", "이전")}
               </Button>
               <span className="text-sm text-muted-foreground">
                 {t("common.pagination.page", {
                   current: page,
                   total: totalPages,
+                  defaultValue: "{{current}} / {{total}}",
                 })}
               </span>
               <Button
@@ -110,7 +111,7 @@ export function NotificationHistoryPanel() {
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
               >
-                {t("common.pagination.next")}
+                {t("common.pagination.next", "다음")}
               </Button>
             </div>
           )}
