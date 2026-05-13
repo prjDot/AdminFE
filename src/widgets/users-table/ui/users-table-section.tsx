@@ -13,6 +13,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { queryKeys } from "@/shared/api/query-keys";
+import { readStoredAdminAccessToken } from "@/shared/api/admin-session-storage";
 import { useDebouncedValue } from "@/shared/hooks/use-debounced-value";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
@@ -51,6 +52,20 @@ import { UsersGrid } from "./users-grid";
 import { getStatusVariant, isUserSuspended } from "./user-table-utils";
 
 const PAGE_SIZE = 20;
+const PRESENCE_TOPIC = "/topic/admin/presence";
+const PRESENCE_SUBSCRIPTION_ID = "sub-admin-presence";
+const WS_HOST = "paw.gbsw.hs.kr";
+const WS_URL = "wss://paw.gbsw.hs.kr/ws/chat";
+
+type PresencePatch = Pick<
+  AdminUserListItem,
+  "presence" | "presenceConnectionState" | "presenceLastActiveAt"
+>;
+
+interface PresenceChangedEvent extends PresencePatch {
+  type: "PRESENCE_CHANGED";
+  userId: string;
+}
 
 export function UsersTableSection() {
   const { t } = useTranslation();
@@ -63,6 +78,9 @@ export function UsersTableSection() {
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [presenceByUserId, setPresenceByUserId] = useState<
+    Record<string, PresencePatch>
+  >({});
 
   useEffect(() => {
     setPage(1);
@@ -91,9 +109,141 @@ export function UsersTableSection() {
     staleTime: 2 * 60_000,
   });
 
-  const items = data?.items ?? [];
+  const items = useMemo(() => {
+    const baseItems = data?.items ?? [];
+    return baseItems.map((item) => ({
+      ...item,
+      ...(presenceByUserId[item.id] ?? {}),
+    }));
+  }, [data?.items, presenceByUserId]);
   const total = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  useEffect(() => {
+    const token = readStoredAdminAccessToken();
+    if (!token) return;
+
+    let socket: WebSocket | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let reconnectAttempt = 0;
+    let unmounted = false;
+
+    const clearReconnectTimer = () => {
+      if (!reconnectTimer) return;
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    };
+
+    const scheduleReconnect = () => {
+      if (unmounted) return;
+      clearReconnectTimer();
+      reconnectAttempt += 1;
+      const delay = Math.min(1000 * 2 ** reconnectAttempt, 15_000);
+      reconnectTimer = setTimeout(() => {
+        connect();
+      }, delay);
+    };
+
+    const parsePresenceEvent = (body: string): PresenceChangedEvent | null => {
+      try {
+        const payload = JSON.parse(body) as Partial<PresenceChangedEvent>;
+        if (payload?.type !== "PRESENCE_CHANGED") return null;
+        if (!payload.userId) return null;
+        return {
+          type: "PRESENCE_CHANGED",
+          userId: payload.userId,
+          presence: payload.presence as AdminUserListItem["presence"],
+          presenceConnectionState:
+            payload.presenceConnectionState as AdminUserListItem["presenceConnectionState"],
+          presenceLastActiveAt: payload.presenceLastActiveAt ?? null,
+        };
+      } catch {
+        return null;
+      }
+    };
+
+    const handleFrame = (frame: string) => {
+      const [head, ...bodyParts] = frame.split("\n\n");
+      if (!head) return;
+      const lines = head.split("\n");
+      const command = lines[0];
+      const body = bodyParts.join("\n\n");
+
+      if (command === "CONNECTED") {
+        socket?.send(
+          [
+            "SUBSCRIBE",
+            `id:${PRESENCE_SUBSCRIPTION_ID}`,
+            `destination:${PRESENCE_TOPIC}`,
+            "",
+            "\0",
+          ].join("\n"),
+        );
+        return;
+      }
+
+      if (command !== "MESSAGE") return;
+
+      const event = parsePresenceEvent(body);
+      if (!event) return;
+
+      setPresenceByUserId((prev) => ({
+        ...prev,
+        [event.userId]: {
+          presence: event.presence,
+          presenceConnectionState: event.presenceConnectionState,
+          presenceLastActiveAt: event.presenceLastActiveAt,
+        },
+      }));
+    };
+
+    const connect = () => {
+      if (unmounted) return;
+      socket = new WebSocket(WS_URL);
+
+      socket.onopen = () => {
+        reconnectAttempt = 0;
+        socket?.send(
+          [
+            "CONNECT",
+            "accept-version:1.2",
+            `host:${WS_HOST}`,
+            `Authorization:Bearer ${token}`,
+            "",
+            "\0",
+          ].join("\n"),
+        );
+      };
+
+      socket.onmessage = (event) => {
+        const raw = String(event.data ?? "");
+        const frames = raw.split("\0").map((entry) => entry.trim()).filter(Boolean);
+        for (const frame of frames) {
+          handleFrame(frame);
+        }
+      };
+
+      socket.onerror = () => {
+        socket?.close();
+      };
+
+      socket.onclose = () => {
+        scheduleReconnect();
+      };
+    };
+
+    connect();
+
+    return () => {
+      unmounted = true;
+      clearReconnectTimer();
+      try {
+        socket?.close();
+      } catch {
+        return;
+      }
+    };
+  }, []);
 
   const { mutate: mutateSuspend } = useMutation({
     mutationFn: (userId: string) => suspendUser(userId),
