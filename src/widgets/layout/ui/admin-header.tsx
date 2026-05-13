@@ -1,3 +1,4 @@
+import { useCallback, useEffect } from "react";
 import { useAuthStore } from "@/features/auth/model/auth-store";
 import { Button } from "@/shared/ui/button";
 import { useTranslation } from "react-i18next";
@@ -22,11 +23,24 @@ export function AdminHeader() {
     pageSize: 5,
   });
   const notifications = notificationData?.items ?? [];
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     void queryClient.invalidateQueries({
       refetchType: "active",
     });
-  };
+  }, [queryClient]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      if (queryClient.isFetching() > 0) {
+        return;
+      }
+      handleRefresh();
+    }, 3000);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [handleRefresh, queryClient]);
 
   return (
     <header className="flex h-14 shrink-0 items-center justify-between gap-2 border-b bg-card px-2 sm:px-4 lg:px-6">
