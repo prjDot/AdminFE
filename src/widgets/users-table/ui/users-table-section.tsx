@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ColumnDef } from "@tanstack/react-table";
 import type { TFunction } from "i18next";
@@ -13,7 +13,6 @@ import {
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { queryKeys } from "@/shared/api/query-keys";
-import { readStoredAdminAccessToken } from "@/shared/api/admin-session-storage";
 import { useDebouncedValue } from "@/shared/hooks/use-debounced-value";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
@@ -52,20 +51,11 @@ import { UsersGrid } from "./users-grid";
 import { getStatusVariant, isUserSuspended } from "./user-table-utils";
 
 const PAGE_SIZE = 20;
-const PRESENCE_TOPIC = "/topic/admin/presence";
-const PRESENCE_SUBSCRIPTION_ID = "sub-admin-presence";
-const WS_URL = import.meta.env.VITE_WS_URL ?? "wss://paw.gbsw.hs.kr/ws/chat";
-const WS_HOST = import.meta.env.VITE_WS_HOST ?? "paw.gbsw.hs.kr";
 
 type PresencePatch = Pick<
   AdminUserListItem,
   "presence" | "presenceConnectionState" | "presenceLastActiveAt"
 >;
-
-interface PresenceChangedEvent extends PresencePatch {
-  type: "PRESENCE_CHANGED";
-  userId: string;
-}
 
 export function UsersTableSection() {
   const { t } = useTranslation();
@@ -78,15 +68,9 @@ export function UsersTableSection() {
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [accessToken, setAccessToken] = useState<string | null>(() =>
-    readStoredAdminAccessToken(),
-  );
   const [presenceByUserId, setPresenceByUserId] = useState<
     Record<string, PresencePatch>
   >({});
-  const socketRef = useRef<WebSocket | null>(null);
-  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const reconnectAttemptRef = useRef(0);
 
   useEffect(() => {
     setPage(1);
@@ -106,6 +90,7 @@ export function UsersTableSection() {
     queryKey: queryKeys.users.list(queryParams),
     queryFn: () => fetchUsers(queryParams),
     staleTime: 30_000,
+    refetchInterval: 3_000,
   });
 
   const { data: userDetail, isLoading: isDetailLoading } = useQuery({
@@ -126,209 +111,42 @@ export function UsersTableSection() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   useEffect(() => {
-    const syncToken = () => {
-      setAccessToken((prev) => {
-        const next = readStoredAdminAccessToken();
-        return prev === next ? prev : next;
-      });
-    };
-
-    syncToken();
-    window.addEventListener("storage", syncToken);
-    const pollTimer = window.setInterval(syncToken, 1000);
-
-    return () => {
-      window.removeEventListener("storage", syncToken);
-      window.clearInterval(pollTimer);
-    };
-  }, []);
-
-  useEffect(() => {
-    const reportPresenceError = (message: string) => {
-      if (import.meta.env.DEV && typeof reportError === "function") {
-        reportError(new Error(`[presence] ${message}`));
-      }
-    };
-
-    const reportUnknownPresenceEvent = (body: string) => {
-      if (!import.meta.env.DEV || typeof reportError !== "function") {
-        return;
-      }
-
-      try {
-        const payload = JSON.parse(body) as { type?: unknown };
-        if (typeof payload.type === "string") {
-          reportError(
-            new Error(`[presence] Unknown event type received: ${payload.type}`),
-          );
-          return;
-        }
-      } catch {
-        // Ignore parse failures for unknown MESSAGE payloads.
-      }
-
-      reportError(new Error("[presence] Unknown MESSAGE payload received."));
-    };
-
-    const clearReconnectTimer = () => {
-      if (!reconnectTimerRef.current) return;
-      clearTimeout(reconnectTimerRef.current);
-      reconnectTimerRef.current = null;
-    };
-
-    const scheduleReconnect = () => {
-      clearReconnectTimer();
-      reconnectAttemptRef.current += 1;
-      const delay = Math.min(
-        1000 * 2 ** Math.max(0, reconnectAttemptRef.current - 1),
-        15_000,
-      );
-      reconnectTimerRef.current = setTimeout(() => {
-        connect();
-      }, delay);
-    };
-
-    const parsePresenceEvent = (body: string): PresenceChangedEvent | null => {
-      try {
-        const payload = JSON.parse(body) as Partial<PresenceChangedEvent>;
-        if (payload?.type !== "PRESENCE_CHANGED") return null;
-        if (!payload.userId) return null;
-        return {
-          type: "PRESENCE_CHANGED",
-          userId: payload.userId,
-          presence: payload.presence as AdminUserListItem["presence"],
-          presenceConnectionState:
-            payload.presenceConnectionState as AdminUserListItem["presenceConnectionState"],
-          presenceLastActiveAt: payload.presenceLastActiveAt ?? null,
-        };
-      } catch {
-        return null;
-      }
-    };
-
-    const handleFrame = (frame: string) => {
-      const [head, ...bodyParts] = frame.split("\n\n");
-      if (!head) return;
-      const lines = head.split("\n");
-      const command = lines[0];
-      const body = bodyParts.join("\n\n");
-
-      if (command === "CONNECTED") {
-        socketRef.current?.send(
-          [
-            "SUBSCRIBE",
-            `id:${PRESENCE_SUBSCRIPTION_ID}`,
-            `destination:${PRESENCE_TOPIC}`,
-            "",
-            "\0",
-          ].join("\n"),
-        );
-        return;
-      }
-
-      if (command === "ERROR") {
-        try {
-          const parsed = JSON.parse(body) as { message?: string };
-          const message = parsed?.message ?? body;
-          if (message) {
-            reportPresenceError(`STOMP error frame: ${message}`);
-          }
-        } catch {
-          if (body) {
-            reportPresenceError(`STOMP error frame: ${body}`);
-          }
-        }
-        try {
-          socketRef.current?.close();
-        } catch {
-          scheduleReconnect();
-        }
-        return;
-      }
-
-      if (command !== "MESSAGE") return;
-
-      const event = parsePresenceEvent(body);
-      if (!event) {
-        reportUnknownPresenceEvent(body);
-        return;
-      }
-
-      setPresenceByUserId((prev) => ({
-        ...prev,
-        [event.userId]: {
-          presence: event.presence,
-          presenceConnectionState: event.presenceConnectionState,
-          presenceLastActiveAt: event.presenceLastActiveAt,
-        },
-      }));
-    };
-
-    const closeSocket = () => {
-      const current = socketRef.current;
-      if (!current) return;
-      current.onopen = null;
-      current.onmessage = null;
-      current.onerror = null;
-      current.onclose = null;
-      try {
-        current.close();
-      } catch {
-        // no-op
-      }
-      socketRef.current = null;
-    };
-
-    const connect = () => {
-      const latestToken = readStoredAdminAccessToken();
-      if (!latestToken) return;
-
-      closeSocket();
-      socketRef.current = new WebSocket(WS_URL);
-
-      socketRef.current.onopen = () => {
-        reconnectAttemptRef.current = 0;
-        socketRef.current?.send(
-          [
-            "CONNECT",
-            "accept-version:1.2",
-            `host:${WS_HOST}`,
-            `Authorization: Bearer ${latestToken}`,
-            "",
-            "\0",
-          ].join("\n"),
-        );
-      };
-
-      socketRef.current.onmessage = (event) => {
-        const raw = String(event.data ?? "");
-        const frames = raw.split("\0").map((entry) => entry.trim()).filter(Boolean);
-        for (const frame of frames) {
-          handleFrame(frame);
-        }
-      };
-
-      socketRef.current.onerror = () => {
-        socketRef.current?.close();
-      };
-
-      socketRef.current.onclose = () => {
-        scheduleReconnect();
-      };
-    };
-
-    if (accessToken) {
-      connect();
-    } else {
-      clearReconnectTimer();
-      closeSocket();
+    const users = data?.items;
+    if (!users) {
+      return;
     }
 
-    return () => {
-      clearReconnectTimer();
-      closeSocket();
-    };
-  }, [accessToken]);
+    setPresenceByUserId((prev) => {
+      const next: Record<string, PresencePatch> = {};
+      let changed = false;
+
+      for (const user of users) {
+        const nextPatch: PresencePatch = {
+          presence: user.presence,
+          presenceConnectionState: user.presenceConnectionState,
+          presenceLastActiveAt: user.presenceLastActiveAt,
+        };
+        const prevPatch = prev[user.id];
+
+        next[user.id] = nextPatch;
+
+        if (
+          !prevPatch ||
+          prevPatch.presence !== nextPatch.presence ||
+          prevPatch.presenceConnectionState !== nextPatch.presenceConnectionState ||
+          prevPatch.presenceLastActiveAt !== nextPatch.presenceLastActiveAt
+        ) {
+          changed = true;
+        }
+      }
+
+      if (!changed && Object.keys(prev).length === Object.keys(next).length) {
+        return prev;
+      }
+
+      return next;
+    });
+  }, [data?.items]);
 
   const { mutate: mutateSuspend } = useMutation({
     mutationFn: (userId: string) => suspendUser(userId),

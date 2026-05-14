@@ -37,6 +37,7 @@ export function DashboardPage() {
     queryKey: queryKeys.dashboard.summary(dateParams),
     queryFn: () => getDashboardSummary(dateParams),
     staleTime: 30_000,
+    refetchInterval: 5_000,
   });
 
   const timelineQuery = useQuery({
