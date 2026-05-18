@@ -48,9 +48,10 @@ export function useSendNotification() {
       });
       return unwrapApiResponse(res);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.notifications.history(),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["notifications", "history"],
+        refetchType: "active",
       });
     },
   });
