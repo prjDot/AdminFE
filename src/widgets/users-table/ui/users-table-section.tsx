@@ -90,7 +90,6 @@ export function UsersTableSection() {
     queryKey: queryKeys.users.list(queryParams),
     queryFn: () => fetchUsers(queryParams),
     staleTime: 30_000,
-    refetchInterval: 3_000,
   });
 
   const { data: userDetail, isLoading: isDetailLoading } = useQuery({

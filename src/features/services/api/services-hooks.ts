@@ -13,7 +13,6 @@ export function useIntegrationsOverview() {
     queryKey: queryKeys.integrations.overview(),
     queryFn: fetchIntegrationsOverview,
     staleTime: 60_000,
-    refetchInterval: 120_000,
   });
 }
 
@@ -22,7 +21,6 @@ export function useServicesOverview() {
     queryKey: queryKeys.services.overview(),
     queryFn: fetchServicesOverview,
     staleTime: 60_000,
-    refetchInterval: 120_000,
   });
 }
 

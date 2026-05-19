@@ -18,7 +18,6 @@ export function useTrafficLogs(
   return useQuery({
     queryKey: queryKeys.traffic.logs({ errorsOnly, limit, sortOrder }),
     queryFn: () => fetchTrafficLogs({ errorsOnly, limit, sortOrder }),
-    refetchInterval: 2_000,
     staleTime: 1_000,
   });
 }
