@@ -1,6 +1,9 @@
 import { apiClient } from "@/shared/api/client";
 import { type ApiResponse, unwrapApiResponse } from "@/shared/api/api-response";
 
+const ADMIN_GLOBAL_REGION = "*";
+const EXTERNAL_NOTICE_MEDIA_HOSTS = new Set(["apis.data.go.kr"]);
+
 export interface AdminNoticeListItem {
   id: string;
   title: string;
@@ -47,16 +50,80 @@ export interface AdminNoticeDetail extends AdminNoticeListItem {
   reportCount: number;
 }
 
+function getApiOrigin() {
+  const configured = (import.meta.env.VITE_API_URL as string | undefined)?.trim();
+  if (configured) {
+    try {
+      return new URL(configured).origin;
+    } catch {
+      // fall through
+    }
+  }
+  return "https://paw.gbsw.hs.kr";
+}
+
+function normalizeNoticeMediaUrl(value: string | null | undefined) {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const apiOrigin = getApiOrigin();
+
+  try {
+    const resolvedUrl = new URL(trimmed, apiOrigin);
+    if (EXTERNAL_NOTICE_MEDIA_HOSTS.has(resolvedUrl.hostname)) {
+      return null;
+    }
+    return resolvedUrl.toString();
+  } catch {
+    return null;
+  }
+}
+
+function normalizeNoticeListItem(item: AdminNoticeListItem): AdminNoticeListItem {
+  return {
+    ...item,
+    thumbnailUrl: normalizeNoticeMediaUrl(item.thumbnailUrl),
+  };
+}
+
+function normalizeNoticeDetail(item: AdminNoticeDetail): AdminNoticeDetail {
+  return {
+    ...item,
+    thumbnailUrl: normalizeNoticeMediaUrl(item.thumbnailUrl),
+    images: item.images
+      .map((image) => normalizeNoticeMediaUrl(image))
+      .filter((image): image is string => Boolean(image)),
+  };
+}
+
+function withAdminGlobalRegion(params: AdminNoticeListParams) {
+  const { mineOnly: _mineOnly, region: _region, ...rest } = params as AdminNoticeListParams & {
+    mineOnly?: unknown;
+  };
+  return {
+    ...rest,
+    region: ADMIN_GLOBAL_REGION,
+  };
+}
+
 export async function fetchNotices(params: AdminNoticeListParams) {
-  return unwrapApiResponse(
-    await apiClient.get<ApiResponse<AdminNoticeListResponse>>("/admin/notices", { params }),
+  const data = unwrapApiResponse(
+    await apiClient.get<ApiResponse<AdminNoticeListResponse>>("/admin/notices", {
+      params: withAdminGlobalRegion(params),
+    }),
   );
+  return {
+    ...data,
+    items: data.items.map(normalizeNoticeListItem),
+  };
 }
 
 export async function fetchNoticeDetail(noticeId: string) {
-  return unwrapApiResponse(
+  const data = unwrapApiResponse(
     await apiClient.get<ApiResponse<AdminNoticeDetail>>(`/admin/notices/${noticeId}`),
   );
+  return normalizeNoticeDetail(data);
 }
 
 export async function hideNotice(noticeId: string) {
@@ -75,7 +142,7 @@ export async function exportNoticesCSV(
   params: Omit<AdminNoticeListParams, "page" | "pageSize">,
 ) {
   const response = await apiClient.get("/admin/notices/export.csv", {
-    params,
+    params: withAdminGlobalRegion(params),
     responseType: "blob",
   });
   return response.data as Blob;

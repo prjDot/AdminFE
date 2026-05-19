@@ -2,15 +2,15 @@ import { useState } from "react";
 import { Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Input } from "@/shared/ui/input";
+import { Button } from "@/shared/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { NoticesTableSection } from "@/widgets/notices-table/ui/notices-table-section";
-import { useDebouncedValue } from "@/shared/hooks/use-debounced-value";
 
 export function NoticesPage() {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState("all"); // "all" | "LOST" | "FOUND" | "RESOLVED"
-  const [search, setSearch] = useState("");
-  const debouncedSearch = useDebouncedValue(search);
+  const [searchInput, setSearchInput] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
 
   return (
     <div className="mx-auto max-w-screen-xl space-y-6 p-4 sm:p-8">
@@ -41,21 +41,35 @@ export function NoticesPage() {
           </TabsList>
         </Tabs>
 
-        <div className="relative w-full sm:w-72">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder={t("notices.searchPlaceholder")}
-            className="bg-card pl-9"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+        <div className="flex w-full gap-2 sm:w-auto">
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder={t("notices.searchPlaceholder")}
+              className="bg-card pl-9"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  setAppliedSearch(searchInput.trim());
+                }
+              }}
+            />
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setAppliedSearch(searchInput.trim())}
+          >
+            {t("common.actions.refresh", "새로고침")}
+          </Button>
         </div>
       </div>
 
       <NoticesTableSection
         status={activeTab === "all" ? undefined : activeTab}
-        search={debouncedSearch}
+        search={appliedSearch}
       />
     </div>
   );

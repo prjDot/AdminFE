@@ -181,6 +181,8 @@ export function NoticesTableSection({
                   src={notice.thumbnailUrl}
                   alt={notice.title}
                   className="h-10 w-10 rounded-md object-cover"
+                  loading="lazy"
+                  decoding="async"
                 />
               ) : (
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-muted">
@@ -380,6 +382,8 @@ export function NoticesTableSection({
                         src={notice.thumbnailUrl}
                         alt={notice.title}
                         className="h-32 w-full object-cover border-b"
+                        loading="lazy"
+                        decoding="async"
                       />
                     ) : (
                       <div className="flex h-32 items-center justify-center border-b bg-muted">

@@ -1,14 +1,18 @@
+import { useCallback, useEffect, useState } from "react";
 import { useAuthStore } from "@/features/auth/model/auth-store";
 import { Button } from "@/shared/ui/button";
 import { useTranslation } from "react-i18next";
 import { UiPreferenceControls } from "@/widgets/layout/ui/ui-preference-controls";
 import { Menu, Bell, LogOut, RefreshCw } from "lucide-react";
 import { useIsFetching, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/shared/ui/sheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
 import { Link } from "react-router-dom";
 import { AdminSidebar } from "./admin-sidebar";
 import { useNotificationHistory } from "@/features/notifications/api/notification-hooks";
+
+const AUTO_REFRESH_INTERVAL_MS = 3_000;
 
 export function AdminHeader() {
   const { t } = useTranslation();
@@ -16,17 +20,63 @@ export function AdminHeader() {
   const isFetching = useIsFetching();
   const admin = useAuthStore((state) => state.admin);
   const logout = useAuthStore((state) => state.logout);
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(false);
   const adminName = admin?.name || t("header.fallbackAdmin");
   const { data: notificationData } = useNotificationHistory({
     page: 1,
     pageSize: 5,
   });
   const notifications = notificationData?.items ?? [];
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     void queryClient.invalidateQueries({
       refetchType: "active",
     });
-  };
+  }, [queryClient]);
+
+  useEffect(() => {
+    const handleShortcut = (event: KeyboardEvent) => {
+      if (!event.shiftKey) {
+        return;
+      }
+      if (event.key.toLowerCase() !== "r") {
+        return;
+      }
+
+      const isMacShortcut = event.metaKey && !event.ctrlKey;
+      const isWindowsShortcut = event.ctrlKey && !event.metaKey;
+      if (!isMacShortcut && !isWindowsShortcut) {
+        return;
+      }
+
+      event.preventDefault();
+      setAutoRefreshEnabled((prev) => {
+        const next = !prev;
+        toast.message(
+          next
+            ? "자동 새로고침 켜짐 (3초 간격)"
+            : "자동 새로고침 꺼짐",
+        );
+        return next;
+      });
+    };
+
+    window.addEventListener("keydown", handleShortcut);
+    return () => {
+      window.removeEventListener("keydown", handleShortcut);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!autoRefreshEnabled) {
+      return;
+    }
+
+    handleRefresh();
+    const timer = window.setInterval(handleRefresh, AUTO_REFRESH_INTERVAL_MS);
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [autoRefreshEnabled, handleRefresh]);
 
   return (
     <header className="flex h-14 shrink-0 items-center justify-between gap-2 border-b bg-card px-2 sm:px-4 lg:px-6">
@@ -57,7 +107,15 @@ export function AdminHeader() {
           aria-label={t("common.actions.refresh")}
           disabled={isFetching > 0}
         >
-          <RefreshCw className={isFetching > 0 ? "h-5 w-5 animate-spin" : "h-5 w-5"} />
+          <RefreshCw
+            className={
+              isFetching > 0
+                ? "h-5 w-5 animate-spin"
+                : autoRefreshEnabled
+                  ? "h-5 w-5 text-primary"
+                  : "h-5 w-5"
+            }
+          />
         </Button>
 
         {/* Alerts Notification Bell */}
