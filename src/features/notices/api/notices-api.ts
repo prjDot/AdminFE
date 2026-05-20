@@ -1,7 +1,6 @@
 import { apiClient } from "@/shared/api/client";
 import { type ApiResponse, unwrapApiResponse } from "@/shared/api/api-response";
 
-const ADMIN_GLOBAL_REGION = "*";
 const EXTERNAL_NOTICE_MEDIA_HOSTS = new Set(["apis.data.go.kr"]);
 
 export interface AdminNoticeListItem {
@@ -97,20 +96,17 @@ function normalizeNoticeDetail(item: AdminNoticeDetail): AdminNoticeDetail {
   };
 }
 
-function withAdminGlobalRegion(params: AdminNoticeListParams) {
+function normalizeNoticeListParams(params: AdminNoticeListParams) {
   const { mineOnly: _mineOnly, region: _region, ...rest } = params as AdminNoticeListParams & {
     mineOnly?: unknown;
   };
-  return {
-    ...rest,
-    region: ADMIN_GLOBAL_REGION,
-  };
+  return rest;
 }
 
 export async function fetchNotices(params: AdminNoticeListParams) {
   const data = unwrapApiResponse(
     await apiClient.get<ApiResponse<AdminNoticeListResponse>>("/admin/notices", {
-      params: withAdminGlobalRegion(params),
+      params: normalizeNoticeListParams(params),
     }),
   );
   return {
@@ -142,7 +138,7 @@ export async function exportNoticesCSV(
   params: Omit<AdminNoticeListParams, "page" | "pageSize">,
 ) {
   const response = await apiClient.get("/admin/notices/export.csv", {
-    params: withAdminGlobalRegion(params),
+    params: normalizeNoticeListParams(params),
     responseType: "blob",
   });
   return response.data as Blob;

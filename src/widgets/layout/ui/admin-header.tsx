@@ -35,20 +35,23 @@ export function AdminHeader() {
 
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
-      if (!event.shiftKey) {
-        return;
-      }
-      if (event.key.toLowerCase() !== "r") {
+      const isMacShortcut = event.metaKey && !event.ctrlKey;
+      const isWindowsShortcut = event.ctrlKey && !event.metaKey;
+      if (!event.shiftKey || (!isMacShortcut && !isWindowsShortcut)) {
         return;
       }
 
-      const isMacShortcut = event.metaKey && !event.ctrlKey;
-      const isWindowsShortcut = event.ctrlKey && !event.metaKey;
-      if (!isMacShortcut && !isWindowsShortcut) {
+      if (event.repeat) {
+        return;
+      }
+
+      if (event.key.toLowerCase() !== "r" && event.code !== "KeyR") {
         return;
       }
 
       event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
       setAutoRefreshEnabled((prev) => {
         const next = !prev;
         toast.message(
@@ -60,9 +63,9 @@ export function AdminHeader() {
       });
     };
 
-    window.addEventListener("keydown", handleShortcut);
+    window.addEventListener("keydown", handleShortcut, true);
     return () => {
-      window.removeEventListener("keydown", handleShortcut);
+      window.removeEventListener("keydown", handleShortcut, true);
     };
   }, []);
 
