@@ -1,23 +1,20 @@
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/shared/api/query-keys";
-import { fetchTrafficConfig, fetchTrafficLogs } from "./traffic-api";
-
-export function useTrafficConfig() {
-  return useQuery({
-    queryKey: queryKeys.traffic.config(),
-    queryFn: fetchTrafficConfig,
-    staleTime: 300_000,
-  });
-}
+import { fetchTrafficLogs } from "./traffic-api";
 
 export function useTrafficLogs(
-  limit = 100,
+  limit = 50,
   errorsOnly = false,
   sortOrder: "asc" | "desc" = "desc",
+  enabled = true,
 ) {
   return useQuery({
     queryKey: queryKeys.traffic.logs({ errorsOnly, limit, sortOrder }),
     queryFn: () => fetchTrafficLogs({ errorsOnly, limit, sortOrder }),
-    staleTime: 1_000,
+    staleTime: 0,
+    refetchInterval: enabled ? 3_000 : false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    enabled,
   });
 }

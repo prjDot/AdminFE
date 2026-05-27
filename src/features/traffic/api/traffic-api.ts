@@ -1,11 +1,6 @@
 import { type ApiResponse, unwrapApiResponse } from "@/shared/api/api-response";
 import { apiClient } from "@/shared/api/client";
 
-export interface TrafficConfig {
-  trackedApiPrefixes: string[];
-  errorStatusFilter?: string;
-}
-
 export interface TrafficLog {
   timestamp: string;
   direction: string;
@@ -23,12 +18,6 @@ export interface TrafficLogsResponse {
   errorCount: number;
 }
 
-export async function fetchTrafficConfig() {
-  return unwrapApiResponse(
-    await apiClient.get<ApiResponse<TrafficConfig>>("/admin/traffic/config"),
-  );
-}
-
 export interface TrafficLogParams {
   errorsOnly?: boolean;
   limit?: number;
@@ -37,7 +26,7 @@ export interface TrafficLogParams {
 
 export async function fetchTrafficLogs({
   errorsOnly = false,
-  limit = 100,
+  limit = 50,
   sortOrder = "desc",
 }: TrafficLogParams = {}) {
   return unwrapApiResponse(

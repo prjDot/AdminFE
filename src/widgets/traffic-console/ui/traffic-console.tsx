@@ -1,7 +1,7 @@
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Activity, AlertTriangle, Clock3, Layers3, Radio } from "lucide-react";
-import { useTrafficConfig, useTrafficLogs } from "@/features/traffic/api/traffic-hooks";
+import { useTrafficLogs } from "@/features/traffic/api/traffic-hooks";
 import type { TrafficLog } from "@/features/traffic/api/traffic-api";
 import { cn } from "@/shared/lib/utils";
 import { Badge } from "@/shared/ui/badge";
@@ -24,6 +24,9 @@ import {
 import { Switch } from "@/shared/ui/switch";
 import {
   ALL_TRAFFIC_GROUP,
+  isExcludedTrafficPath,
+  TRAFFIC_ERROR_FILTER,
+  TRAFFIC_TRACKED_PREFIXES,
   formatTrafficBody,
   getTrafficGroupKey,
 } from "./traffic-console-utils";
@@ -33,13 +36,15 @@ export function TrafficConsole() {
   const [selectedGroup, setSelectedGroup] = useState(ALL_TRAFFIC_GROUP);
   const [errorsOnly, setErrorsOnly] = useState(false);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
-  const { data: config } = useTrafficConfig();
   const { data: logsData, isError, isLoading } = useTrafficLogs(
-    100,
+    50,
     errorsOnly,
     sortOrder,
   );
-  const logs = useMemo(() => logsData?.items ?? [], [logsData?.items]);
+  const logs = useMemo(
+    () => (logsData?.items ?? []).filter((item) => !isExcludedTrafficPath(item.path)),
+    [logsData?.items],
+  );
 
   const sortedLogs = useMemo(
     () =>
@@ -98,10 +103,10 @@ export function TrafficConsole() {
             </div>
             <Badge variant="outline" className="w-fit bg-background">
               {t("traffic.trackedPrefixes")}:{" "}
-              {(config?.trackedApiPrefixes ?? []).join(", ") || "-"}
+              {TRAFFIC_TRACKED_PREFIXES.join(", ")}
             </Badge>
             <Badge variant="outline" className="w-fit bg-background">
-              {t("traffic.errorFilter")}: {config?.errorStatusFilter ?? "-"}
+              {t("traffic.errorFilter")}: {TRAFFIC_ERROR_FILTER}
             </Badge>
           </div>
         </CardHeader>
